@@ -34,9 +34,26 @@ Telefoni e portatile devono stare sulla **stessa rete Wi-Fi**. Internet non serv
 | Hotspot del telefono | solo per gruppi piccoli: di solito regge una decina di dispositivi al massimo |
 | Wi-Fi della birreria | spesso isola i dispositivi fra loro, e allora i telefoni non vedono il portatile. Provalo prima |
 
-**La rete si chiama `pappagallo`, password `pydataroma` (WPA2).** Configura il router così: nome e password sono già sulla slide 3, insieme a un QR "inquadra e collegati", e lo stesso QR compare in cima al notebook. Per cambiarli, imposta `SALA_WIFI` e `SALA_WIFI_PASSWORD` prima di avviare il notebook, e rigenera il QR della slide 3.
+### Le due cose da impostare sul router
 
-Il notebook trova da solo l'indirizzo del portatile e ne fa un secondo QR code, quello del gioco. Se sceglie l'interfaccia sbagliata, forzalo con `SALA_HOST=192.168.x.y`.
+Le slide stampano due QR fissi: il primo per entrare nella rete, il secondo per aprire il gioco. Il router va configurato perché tutti e due funzionino.
+
+1. **Wi-Fi `pappagallo`, password `pydataroma` (WPA2).** È il QR della slide 3, "inquadra e collegati".
+2. **Il nome `pappagallo.lan` deve puntare al portatile.** È il QR della slide 4, `http://pappagallo.lan:8000`. Sul router fai due cose: una *prenotazione DHCP* (il portatile riceve sempre lo stesso IP) e un *nome host* `pappagallo` per quell'IP. Su OpenWrt/LuCI le trovi in Network › DHCP and DNS › Static Leases (con Hostname `pappagallo`); i router GL.iNet hanno di solito le stesse voci nell'interfaccia avanzata.
+
+**Controllo:** all'avvio, il notebook e `server.py` verificano che `pappagallo.lan` arrivi proprio a questo portatile. Se va tutto bene compare ✅. Altrimenti il notebook mostra un avviso e un QR di riserva via IP, che funziona sempre ma non è quello delle slide.
+
+**Per cambiare rete o indirizzo:** imposta `SALA_WIFI`, `SALA_WIFI_PASSWORD` e `SALA_URL`, poi rigenera i QR per le slide con il comando qui sotto. Scrive `qr/wifi.svg|png` e `qr/gioco.svg|png`; nel deck, sostituisci le immagini dei QR nelle slide 3, 4 e 9.
+
+```bash
+uv run python sala.py
+```
+
+Se il portatile ha più interfacce di rete e il notebook sceglie quella sbagliata, forzala con `SALA_HOST=192.168.x.y`.
+
+### E un captive portal?
+
+L'idea sarebbe che, appena entrati nel Wi-Fi, il telefono apra da solo la pagina del gioco. Con l'hotspot di macOS non è praticabile: Condivisione Internet richiede una connessione da condividere e gestisce DHCP e DNS a modo suo, senza impostazioni per un portale. Con un router OpenWrt si può fare, mandando tutto il DNS al portatile e servendo il gioco sulla porta 80. Però le finestre "captive" di iOS e Android sono browser ridotti, che la gente chiude con un tocco. Due QR ben grandi sono più affidabili.
 
 ---
 
@@ -74,12 +91,14 @@ Una prova completa di tutto il notebook (`uv run python pappagallo.py`) dura cir
 ## La sera
 
 1. Accendi il router e collega il portatile.
-2. Avvia `uv run python server.py`: stampa l'indirizzo e un QR code. Se macOS chiede di accettare connessioni in entrata per Python, rispondi **Consenti**.
+2. Avvia `uv run python server.py`: stampa l'indirizzo, un QR code e il controllo su `pappagallo.lan` (✅ o ⚠️). Se macOS chiede di accettare connessioni in entrata per Python, rispondi **Consenti**.
 3. Avvia `HF_HUB_OFFLINE=1 uv run marimo edit pappagallo.py` e porta lo zoom del browser al 125–150%. In alto, il notebook mostra i due QR (prima il Wi-Fi, poi il gioco), `🟢 dati dal sito` e quanti telefoni sono collegati.
 4. Proietta le slide (dal PDF).
 
-### Slide 1–3: benvenuto e collegamento (5')
-Aspetta che il contatore dei telefoni collegati salga. Se un Android non apre la pagina, spesso basta disattivare per un attimo i dati mobili.
+### Slide 1–4: benvenuto e collegamento (5')
+La slide 3 è il passo 1 (il Wi-Fi), la slide 4 il passo 2 (il gioco). Resta sulla 4 finché il contatore dei telefoni collegati nel notebook non smette di salire. Molti telefoni avvisano che la rete non ha Internet: bisogna dire di restare collegati. Se un Android non apre la pagina, spesso basta disattivare per un attimo i dati mobili.
+
+L'ultima slide (la 9) mostra di nuovo i due QR: lasciala su un secondo schermo, o tornaci fra un atto e l'altro, per chi arriva in ritardo.
 
 ### Atto 1: Indovina il prossimo token (15')
 1. Scegli la frase nel menu, poi premi **▶️ Apri la votazione sui telefoni**.

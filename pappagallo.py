@@ -19,14 +19,14 @@ def _():
     from aiuti import (accordo, confronta, distribuzione, elenca_voti, frase_evidenziata, grafico_loss,
                        grafico_perplessita, grafico_token, leggi_voti, numero, parole, percento,
                        prima_parola, stile, unisci, visibile)
-    from sala import WIFI_NOME, WIFI_PASSWORD, Sala, qr_svg, qr_wifi_svg, url_pubblico
+    from sala import URL_GIOCO, WIFI_NOME, WIFI_PASSWORD, Sala, qr_svg, qr_wifi_svg, url_da_mostrare
 
     stile()
     IN_NOTEBOOK = mo.running_in_notebook()  # da script (prova generale) i bottoni si considerano premuti
-    return (AutoModelForCausalLM, AutoTokenizer, Counter, IN_NOTEBOOK, Sala, WIFI_NOME, WIFI_PASSWORD, accordo,
-            confronta, copy, defaultdict, distribuzione, elenca_voti, frase_evidenziata, gc, grafico_loss,
+    return (AutoModelForCausalLM, AutoTokenizer, Counter, IN_NOTEBOOK, Sala, URL_GIOCO, WIFI_NOME, WIFI_PASSWORD,
+            accordo, confronta, copy, defaultdict, distribuzione, elenca_voti, frase_evidenziata, gc, grafico_loss,
             grafico_perplessita, grafico_token, leggi_voti, math, mo, numero, parole, percento, prima_parola,
-            qr_svg, qr_wifi_svg, random, torch, unisci, url_pubblico, visibile)
+            qr_svg, qr_wifi_svg, random, torch, unisci, url_da_mostrare, visibile)
 
 
 @app.cell(hide_code=True)
@@ -61,19 +61,24 @@ def _(AutoModelForCausalLM, AutoTokenizer, mo, torch):
 
 
 @app.cell
-def _(Sala, WIFI_NOME, WIFI_PASSWORD, mo, qr_svg, qr_wifi_svg, url_pubblico):
+def _(Sala, URL_GIOCO, WIFI_NOME, WIFI_PASSWORD, mo, qr_svg, qr_wifi_svg, url_da_mostrare):
     sito = Sala()
-    URL_SALA = url_pubblico()
+    # Le slide puntano a URL_GIOCO: se su questa rete non arriva qui, mostriamo l'indirizzo via IP.
+    _url, _ok, _motivo = url_da_mostrare()
     aggiorna = mo.ui.refresh(options=["1s", "2s", "5s"], default_interval="2s", label="live")
+    _avviso = (mo.md(f"✅ Il QR delle slide funziona: {_motivo}.") if _ok else
+               mo.callout(mo.md(f"**Il QR del gioco sulle slide non porta qui**: {_motivo}. "
+                                f"Fai inquadrare questo, oppure aggiungi `{URL_GIOCO}` sul router."), kind="warn"))
     mo.vstack([
         mo.md("## 📱 Entra nella sala"),
         mo.hstack([
             mo.vstack([mo.Html(qr_wifi_svg(scala=6)),
                        mo.md(f"**1 · Wi-Fi** `{WIFI_NOME}`<br>password `{WIFI_PASSWORD}`")], align="center"),
-            mo.vstack([mo.Html(qr_svg(URL_SALA, scala=6)),
-                       mo.md(f"**2 · Il gioco**<br>`{URL_SALA}`")], align="center"),
+            mo.vstack([mo.Html(qr_svg(_url, scala=6)),
+                       mo.md(f"**2 · Il gioco**<br>`{_url}`")], align="center"),
             aggiorna,
         ], justify="start", align="center", gap=3),
+        _avviso,
     ])
     return aggiorna, sito
 

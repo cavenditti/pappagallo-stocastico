@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from sala import PORTA, url_pubblico
+from sala import PORTA, url_da_mostrare
 
 QUI = Path(__file__).parent
 FILE_STATO = QUI / "sala.json"
@@ -253,8 +253,9 @@ def azzera(request: Request):
 if __name__ == "__main__":
     import segno
 
-    url = url_pubblico()
-    print(f"\n🦜  Il sito della sala è su  {url}\n")
+    url, ok, motivo = url_da_mostrare()
+    print(f"\n🦜  Il sito della sala è su  {url}")
+    print(("✅  " if ok else "⚠️   il QR delle slide non porta qui: ") + motivo.replace("`", "") + "\n")
     segno.make(url, error="m").terminal(compact=True)
     print("\n(il palco, cioè il notebook, parla con http://127.0.0.1:%d)\n" % PORTA)
     uvicorn.run(app, host="0.0.0.0", port=PORTA, log_level="warning")
