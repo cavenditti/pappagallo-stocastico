@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
+__marimo__/
+
+# dati della serata (voti e catene) e i loro backup
+sala.json
+sala.tmp
+sala-backup-*.json

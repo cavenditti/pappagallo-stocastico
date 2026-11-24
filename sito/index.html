@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Il pappagallo stoca**ico</title>
+<style>
+  /* I colori del pappagallo ara: verde giungla, rosso macao, giallo piuma. */
+  :root {
+    color-scheme: light;
+    --bg: #faf5ea; --surface: #fffdf7; --ink: #1b2a22; --ink2: #4b5a50; --muted: #7d867f;
+    --line: #e6dcc6; --accent: #c2391f; --accent-ink: #fffdf7; --chip: #f4c542; --chip-ink: #1b2a22;
+    --danger: #a62a14;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #0f1f18; --surface: #13281f; --ink: #faf5ea; --ink2: #cfe0d4; --muted: #8fa597;
+      --line: #2b4a3c; --accent: #f4c542; --accent-ink: #1b2a22; --chip: #e5533a; --chip-ink: #fffdf7;
+      --danger: #ff8a73;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-text-size-adjust: 100%; }
+  main { max-width: 520px; margin: 0 auto; min-height: 100svh; display: flex; flex-direction: column; gap: 20px;
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 10px; color: var(--ink2); font-size: 15px; font-weight: 600; }
+  header span:first-child { font-size: 26px; }
+  #vista { display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .eyebrow { margin: 0 0 8px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .prompt { margin: 0; font-size: clamp(25px, 7vw, 32px); line-height: 1.25; font-weight: 650; overflow-wrap: anywhere; }
+  .prompt .puntini { color: var(--accent); }
+  .visibili { margin: 0; font-size: clamp(32px, 10vw, 44px); line-height: 1.15; font-weight: 700; overflow-wrap: anywhere; }
+  .visibili .nebbia { color: var(--muted); font-weight: 500; }
+  .nota { margin: 0; color: var(--ink2); font-size: 16px; line-height: 1.45; }
+  .chip { display: inline-block; background: var(--chip); color: var(--chip-ink); border-radius: 8px; padding: 0 10px; }
+  form { display: flex; flex-direction: column; gap: 12px; }
+  input { width: 100%; font: inherit; font-size: 22px; padding: 14px 16px; border-radius: 12px;
+    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  input:focus { outline: none; border-color: var(--accent); }
+  button { font: inherit; font-size: 19px; font-weight: 650; min-height: 54px; padding: 14px 18px; border-radius: 12px;
+    border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+  button.secondario { background: transparent; color: var(--accent); border: 1.5px solid var(--line); }
+  button:disabled { opacity: .55; }
+  .errore { margin: 0; min-height: 1.3em; color: var(--danger); font-size: 15px; }
+  .riga { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--muted); font-size: 15px; }
+  .timer { font-variant-numeric: tabular-nums; }
+  .emoji { margin: 4px 0 0; font-size: 60px; text-align: center; }
+  .centro { text-align: center; }
+  footer { margin-top: auto; text-align: center; color: var(--muted); font-size: 13px; }
+  footer.persa { color: var(--danger); }
+</style>
+</head>
+<body>
+<main>
+  <header><span aria-hidden="true">🦜</span><span>Il pappagallo stoca**ico</span></header>
+  <section id="vista" aria-live="polite"></section>
+  <footer id="rete">collegamento alla sala…</footer>
+</main>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const vista = $("#vista");
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// Un identificativo casuale per questo telefono: un voto a testa, e niente nomi.
+function nuovoId() {
+  const a = new Uint8Array(12);
+  crypto.getRandomValues(a);
+  return Array.from(a, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+const ID = (() => {
+  try {
+    let d = localStorage.getItem("pappagallo-id");
+    if (!d) { d = nuovoId(); localStorage.setItem("pappagallo-id", d); }
+    return d;
+  } catch (e) { return nuovoId(); }
+})();
+
+async function api(percorso, dati) {
+  const opzioni = dati
+    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ d: ID, ...dati }) }
+    : { cache: "no-store" };
+  const url = dati ? percorso : `${percorso}?d=${ID}`;
+  const r = await fetch(url, opzioni);
+  const corpo = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(corpo.detail || "Qualcosa è andato storto, riprova.");
+  return corpo;
+}
+
+// Ridisegniamo solo quando cambia la "chiave" della vista: così il polling
+// non cancella quello che stai scrivendo.
+let chiave = null;
+function mostra(nuova, html, poi) {
+  if (nuova === chiave) return;
+  chiave = nuova;
+  vista.innerHTML = html;
+  if (poi) poi();
+}
+const ridisegna = () => { chiave = null; aggiorna(); };
+
+let ultimo = null;        // ultimo stato ricevuto dal server
+let cambiaVoto = false;   // l'utente vuole cambiare voto
+let turno = null;         // la catena assegnata: {catena, visibili, memoria, posizione, lunghezza, scadenza}
+let esito = null;         // ultima parola aggiunta (per la schermata "fatto")
+let attesaTurno = false;  // stiamo aspettando una catena libera
+
+// --- viste ---------------------------------------------------------------
+function vistaAttesa(titolo, testo, emoji = "👀") {
+  mostra(`attesa:${titolo}`, `
+    <div class="card centro">
+      <p class="emoji" aria-hidden="true">${emoji}</p>
+      <p class="prompt">${esc(titolo)}</p>
+    </div>
+    <p class="nota centro">${esc(testo)}</p>`);
+}
+
+function vistaVoto(s) {
+  if (s.mio_voto && !cambiaVoto) {
+    return mostra(`votato:${s.prompt}:${s.mio_voto}`, `
+      <div class="card">
+        <p class="eyebrow">Hai votato</p>
+        <p class="prompt">${esc(s.prompt)} <span class="chip">${esc(s.mio_voto)}</span></p>
+      </div>
+      <p class="nota">Puoi cambiare idea finché la votazione è aperta. Intanto guarda lo schermo 👀</p>
+      <button class="secondario" id="cambia">Cambia voto</button>`,
+      () => { $("#cambia").onclick = () => { cambiaVoto = true; ridisegna(); }; });
+  }
+  mostra(`vota:${s.prompt}`, `
+    <div class="card">
+      <p class="eyebrow">Indovina la prossima parola</p>
+      <p class="prompt">${esc(s.prompt)}<span class="puntini">…</span></p>
+    </div>
+    <form id="modulo" autocomplete="off">
+      <input id="parola" maxlength="40" placeholder="una parola sola" autocapitalize="none" enterkeyhint="send" aria-label="La prossima parola">
+      <button id="invia">Vota</button>
+      <p class="errore" id="errore"></p>
+    </form>`,
+    () => {
+      $("#modulo").onsubmit = async (e) => {
+        e.preventDefault();
+        const testo = $("#parola").value.trim();
+        if (!testo) return;
+        $("#invia").disabled = true;
+        try {
+          await api("/api/voto", { testo });
+          cambiaVoto = false;
+          ridisegna();
+        } catch (err) {
+          $("#errore").textContent = err.message;
+          $("#invia").disabled = false;
+        }
+      };
+    });
+}
+
+function vistaCatena(s) {
+  if (s.finite) {
+    turno = null;
+    return vistaAttesa("Le catene sono complete!", `Hai scritto ${s.mie_parole} parole. Ora guarda lo schermo: tra poco le leggiamo.`, "🎭");
+  }
+  if (turno) return vistaTurno();
+  if (attesaTurno) {
+    return mostra("attendi", `
+      <div class="card centro"><p class="emoji" aria-hidden="true">⏳</p>
+      <p class="prompt">Tutte le catene sono occupate</p></div>
+      <p class="nota centro">Qualcuno sta scrivendo. Riprovo da solo tra un attimo…</p>`);
+  }
+  const fatto = esito ? `
+      <div class="card"><p class="eyebrow">Fatto ✨</p>
+      <p class="prompt">Hai aggiunto <span class="chip">${esc(esito)}</span></p></div>` : `
+      <div class="card">
+        <p class="eyebrow">Catena di Markov umana</p>
+        <p class="prompt">Vedrai solo l'ultima parola di una frase, a volte le ultime due. Scrivi quella che viene dopo.</p>
+      </div>`;
+  mostra(`pronto:${esito}:${s.mie_parole}`, `${fatto}
+    <button id="scrivi">${esito ? "✍️ Un'altra parola" : "✍️ Tocca a me"}</button>
+    <p class="nota centro">${s.mie_parole ? `Hai scritto ${s.mie_parole} ${s.mie_parole === 1 ? "parola" : "parole"}.` : "Nessuno conosce la frase intera."}</p>
+    <p class="errore centro" id="errore"></p>`,
+    () => { $("#scrivi").onclick = chiediTurno; });
+}
+
+function vistaTurno() {
+  const t = turno;
+  mostra(`turno:${t.catena}:${t.posizione}`, `
+    <div class="card">
+      <p class="eyebrow">Parola ${t.posizione} di ${t.lunghezza} · vedi ${t.memoria === 1 ? "solo l'ultima parola" : "le ultime due"}</p>
+      <p class="visibili"><span class="nebbia">…</span> ${t.visibili.map(esc).join(" ")}</p>
+    </div>
+    <form id="modulo" autocomplete="off">
+      <input id="parola" maxlength="30" placeholder="la parola che viene dopo" autocapitalize="none" enterkeyhint="send" aria-label="La parola successiva">
+      <button id="invia">Aggiungi</button>
+      <div class="riga"><span>Una parola sola</span><span class="timer" id="timer"></span></div>
+      <p class="errore" id="errore"></p>
+    </form>`,
+    () => {
+      $("#modulo").onsubmit = async (e) => {
+        e.preventDefault();
+        const testo = $("#parola").value.trim();
+        if (!testo) return;
+        $("#invia").disabled = true;
+        try {
+          const r = await api("/api/catena/parola", { catena: t.catena, testo });
+          esito = r.parola;
+          turno = null;
+          ridisegna();
+        } catch (err) {
+          $("#errore").textContent = err.message;
+          $("#invia").disabled = false;
+          if (/scaduto/.test(err.message)) { turno = null; setTimeout(ridisegna, 1500); }
+        }
+      };
+      aggiornaTimer();
+    });
+}
+
+function aggiornaTimer() {
+  const el = $("#timer");
+  if (!turno || !el) return;
+  const resto = Math.max(0, Math.round((turno.scadenza - Date.now()) / 1000));
+  el.textContent = resto > 0 ? `${resto} s` : "tempo scaduto";
+}
+setInterval(aggiornaTimer, 500);
+
+async function chiediTurno() {
+  try {
+    const r = await api("/api/catena/turno", {});
+    if (r.attendi) {
+      attesaTurno = !r.finite;
+      ridisegna();
+      if (attesaTurno) setTimeout(chiediTurno, 2000);
+      return;
+    }
+    attesaTurno = false;
+    turno = { ...r, scadenza: Date.now() + r.scade_tra * 1000 };
+    ridisegna();
+  } catch (err) {
+    attesaTurno = false;
+    const el = $("#errore");
+    if (el) el.textContent = err.message;
+  }
+}
+
+// --- polling --------------------------------------------------------------
+let inVolo = false;
+async function aggiorna() {
+  if (inVolo) return;
+  inVolo = true;
+  try {
+    const s = await api("/api/stato");
+    $("#rete").textContent = "collegato alla sala";
+    $("#rete").className = "";
+    if (s.fase !== (ultimo && ultimo.fase)) { turno = null; esito = null; attesaTurno = false; cambiaVoto = false; }
+    ultimo = s;
+    if (s.fase === "vota") vistaVoto(s);
+    else if (s.fase === "catena") vistaCatena(s);
+    else vistaAttesa("Guarda lo schermo", "Tra poco tocca a te.");
+  } catch (err) {
+    $("#rete").textContent = "connessione persa, riprovo…";
+    $("#rete").className = "persa";
+  } finally {
+    inVolo = false;
+  }
+}
+aggiorna();
+setInterval(aggiorna, 1500);
+</script>
+</body>
+</html>

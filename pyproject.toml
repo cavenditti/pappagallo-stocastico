@@ -1,0 +1,15 @@
+[project]
+name = "pappagallo-stocastico"
+version = "0.1.0"
+description = "La sala contro il modello: giochi live per un meetup PyData"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.4",
+    "transformers>=4.56",
+    "accelerate>=1.0",
+    "matplotlib>=3.8",
+    "marimo>=0.25.2",
+    "fastapi>=0.165.0",
+    "uvicorn>=0.54.0",
+    "segno>=1.6.6",
+]
