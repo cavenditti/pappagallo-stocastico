@@ -17,8 +17,8 @@ def _():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     from aiuti import (accordo, confronta, distribuzione, elenca_voti, frase_evidenziata, grafico_loss,
-                       grafico_perplessita, grafico_token, leggi_voti, numero, parole, percento,
-                       prima_parola, stile, unisci, visibile)
+                       grafico_perplessita, grafico_token, leggi_risposte, leggi_voti, numero, parole, percento,
+                       prima_parola, risposta_del_modello, stile, unisci, visibile)
     from sala import WIFI_NOME, WIFI_PASSWORD, Sala, modo, qr_svg, qr_wifi_svg, url_da_mostrare, url_gioco
 
     stile()
@@ -42,6 +42,7 @@ def _():
         grafico_loss,
         grafico_perplessita,
         grafico_token,
+        leggi_risposte,
         leggi_voti,
         math,
         mo,
@@ -53,6 +54,7 @@ def _():
         qr_svg,
         qr_wifi_svg,
         random,
+        risposta_del_modello,
         torch,
         unisci,
         url_da_mostrare,
@@ -79,7 +81,9 @@ def _(mo):
 @app.cell
 def _(AutoModelForCausalLM, AutoTokenizer, mo, torch):
     MODEL_ID = "Qwen/Qwen3-0.6B-Base"  # "base", non "instruct": vogliamo il pappagallo, non l'assistente
-    # alternative:"Qwen/Qwen2.5-0.5B" · "sapienzanlp/Minerva-350M-base-v1.0" (italiano nativo, termini da accettare su HF)
+    # alternative: 
+        # "Qwen/Qwen2.5-0.5B"
+        # "sapienzanlp/Minerva-350M-base-v1.0" (italiano nativo, termini da accettare su HF)
     DEVICE = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
 
     tok = AutoTokenizer.from_pretrained(MODEL_ID)
@@ -155,7 +159,7 @@ def _(mo):
     ---
     ## Atto 1: Indovina il prossimo token
 
-    Sul telefono compare una frase troncata. Scrivete la parola successiva: **una parola sola**.
+    Sul telefono compare una frase troncata. Scrivete come continua: **una, due o tre parole**.
     """)
     return
 
@@ -185,14 +189,14 @@ def _(mo, prompt_ui, sito):
 
 
 @app.cell
-def _(PROMPT, aggiorna, confronta, dati_sala, distribuzione, leggi_voti, mo):
+def _(PROMPT, aggiorna, confronta, dati_sala, distribuzione, leggi_risposte, mo):
     aggiorna
     _d = dati_sala()
     _voti = _d["voti"].get(PROMPT, [])
     _aperta = _d["fase"] == "vota" and _d["prompt"] == PROMPT
     _intestazione = mo.md(("🗳️ **votazione aperta**" if _aperta else "votazione chiusa") + f" · {len(_voti)} voti")
     if _voti:
-        _grafico = confronta({"Sala": distribuzione(leggi_voti(_voti))}, f"La sala: «{PROMPT}…»")
+        _grafico = confronta({"Sala": distribuzione(leggi_risposte(_voti))}, f"La sala: «{PROMPT}…»")
     else:
         _grafico = mo.md("*Ancora nessun voto: inquadrate il QR code e votate.*")
     mo.vstack([_intestazione, _grafico])
@@ -246,6 +250,8 @@ def _(mo):
 
     La sala ha votato una volta a testa. Il modello vota **300 volte**: ogni voto è un'estrazione casuale dalla sua distribuzione (temperatura 1, nessun filtro).
     È esattamente quello che fa quando "scrive".
+
+    Il confronto vero è sulla **prima parola**: il modello sceglie un token alla volta, e la vostra prima parola è il vostro primo "token". Poi guardiamo anche le risposte intere.
     """)
     return
 
@@ -253,14 +259,18 @@ def _(mo):
 @app.cell
 def _(Counter, DEVICE, prima_parola, tok, torch):
     @torch.no_grad()
-    def il_modello_vota(m, prompt: str, n: int = 300, temperatura: float = 1.0) -> Counter:
+    def il_modello_continua(m, prompt: str, n: int = 300, temperatura: float = 1.0) -> list[str]:
+        # n continuazioni campionate: abbastanza token per arrivare a tre parole.
         enc = tok([prompt] * n, return_tensors="pt").to(DEVICE)
         uscita = m.generate(**enc, do_sample=True, temperature=temperatura, top_k=0, top_p=1.0,
-                            max_new_tokens=6, pad_token_id=tok.pad_token_id)
-        continuazioni = tok.batch_decode(uscita[:, enc.input_ids.shape[1]:], skip_special_tokens=True)
-        return Counter(p for p in map(prima_parola, continuazioni) if p)
+                            max_new_tokens=10, pad_token_id=tok.pad_token_id)
+        return tok.batch_decode(uscita[:, enc.input_ids.shape[1]:], skip_special_tokens=True)
 
-    return (il_modello_vota,)
+    def il_modello_vota(m, prompt: str, n: int = 300, temperatura: float = 1.0) -> Counter:
+        # Un voto = la prima parola di una continuazione campionata.
+        return Counter(p for p in map(prima_parola, il_modello_continua(m, prompt, n, temperatura)) if p)
+
+    return il_modello_continua, il_modello_vota
 
 
 @app.cell
@@ -272,36 +282,59 @@ def _(mo):
 
 @app.cell
 def _(
+    Counter,
     IN_NOTEBOOK,
     PROMPT,
     accordo,
     confronta,
     dati_sala,
     distribuzione,
-    il_modello_vota,
+    il_modello_continua,
+    leggi_risposte,
     leggi_voti,
     mo,
     model,
+    percento,
+    prima_parola,
+    risposta_del_modello,
     svela,
 ):
     mo.stop(IN_NOTEBOOK and not svela.value,
             mo.md("*Chiudi la votazione, poi premi **Svela il modello**. Ogni clic è una nuova votazione del modello.*"))
-    p_sala = distribuzione(leggi_voti(dati_sala()["voti"].get(PROMPT, [])))
-    p_modello = distribuzione(il_modello_vota(model, PROMPT))
+    _voti = dati_sala()["voti"].get(PROMPT, [])
+    _continuazioni = il_modello_continua(model, PROMPT)  # 300 voti del modello, usati due volte
+    # 1) la prima parola: il confronto onesto, un token alla volta
+    p_sala = distribuzione(leggi_voti(_voti))
+    p_modello = distribuzione(Counter(p for p in map(prima_parola, _continuazioni) if p))
+    # 2) le risposte intere: la sala fino a tre parole, il modello fino alla prima pausa (massimo tre)
+    r_sala = distribuzione(leggi_risposte(_voti))
+    r_modello = distribuzione(Counter(r for r in map(risposta_del_modello, _continuazioni) if r))
+
+    _s, _m = list(r_sala.items())[:8], list(r_modello.items())[:8]
+    _tabella = ["| | la sala | | il modello | |", "|---:|---|---:|---|---:|"]
+    for _i in range(max(len(_s), len(_m))):
+        _cella = []
+        for _lista, _altra in ((_s, r_modello), (_m, r_sala)):
+            _testo, _quota = _lista[_i] if _i < len(_lista) else ("", None)
+            _cella += [f"**{_testo}**" if _testo in _altra else _testo, percento(_quota) if _quota else ""]
+        _tabella.append(f"| {_i + 1} | " + " | ".join(_cella) + " |")
     mo.vstack([
-        confronta({"Sala": p_sala, "Modello": p_modello}, f"Sala contro modello: «{PROMPT}…»"),
-        mo.md(f"## Accordo sala ↔ modello: **{accordo(p_sala, p_modello):.0%}**"),
+        confronta({"Sala": p_sala, "Modello": p_modello}, f"La prima parola, sala contro modello: «{PROMPT}…»"),
+        mo.md(f"## Accordo sala ↔ modello sulla prima parola: **{accordo(p_sala, p_modello):.0%}**"),
+        mo.md("### Le risposte intere\n*In grassetto quelle che avete dato sia voi sia il modello.*\n\n"
+              + "\n".join(_tabella)),
     ])
-    return (p_sala,)
+    return (r_sala,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ### Le vostre parole, una per una
+    ### Le vostre risposte, una per una
 
-    Probabilità esatta, con la regola della catena: $P(\text{parola}) = \prod_i P(\text{token}_i \mid \text{tutto ciò che viene prima})$,
-    moltiplicata per la probabilità che la parola *finisca lì*, cioè che il token successivo cominci una parola nuova.
+    Quanto avrebbe potuto scriverle il modello? Probabilità esatta, con la regola della catena: $P(\text{risposta}) = \prod_i P(\text{token}_i \mid \text{tutto ciò che viene prima})$,
+    moltiplicata per la probabilità che l'ultima parola *finisca lì*, cioè che il token successivo cominci una parola nuova.
+    Tre parole sono tanti token: ogni token in più moltiplica per un numero minore di 1.
     """)
     return
 
@@ -328,11 +361,11 @@ def _(DEVICE, math, model, tok, torch):
 
 
 @app.cell
-def _(PROMPT, mo, model, p_sala, percento, prob_parola, visibile):
-    _righe = ["| parola | sala | modello | token |", "|---|---:|---:|---|"]
-    for _parola, _quota in list(p_sala.items())[:12]:
-        _p, _pezzi = prob_parola(model, PROMPT, _parola)
-        _righe.append(f"| **{_parola}** | {percento(_quota)} | {percento(_p)} | "
+def _(PROMPT, mo, model, percento, prob_parola, r_sala, visibile):
+    _righe = ["| risposta | sala | modello | token |", "|---|---:|---:|---|"]
+    for _risposta, _quota in list(r_sala.items())[:12]:
+        _p, _pezzi = prob_parola(model, PROMPT, _risposta)  # funziona anche con più parole
+        _righe.append(f"| **{_risposta}** | {percento(_quota)} | {percento(_p)} | "
                       f"`{' + '.join(visibile(x) for x in _pezzi)}` |")
     mo.md("\n".join(_righe))
     return
@@ -807,9 +840,16 @@ def _():
     # 📦 Dati di esempio: li usa il notebook quando il sito è spento (prova generale senza telefoni).
     DEMO_VOTI = {
         "A Roma, quando piove, il traffico": {
-            "impazzisce": 14, "aumenta": 9, "si blocca": 8, "peggiora": 5, "è": 3, "diventa": 2,
+            "impazzisce": 12, "si blocca": 8, "aumenta": 7, "va in tilt": 5, "è un incubo": 4,
+            "peggiora": 3, "si ferma": 2,
         },
-        "Il codice funzionava ieri sera, ma stamattina": {"non": 21, "è": 6, "esplode": 5, "no": 4, "pandas": 3},
+        "Il codice funzionava ieri sera, ma stamattina": {
+            "non funziona più": 11, "non parte": 8, "è esploso": 5, "dà errore": 4, "pandas è cambiato": 3,
+        },
+        "La cosa più bella di Python è": {
+            "la sintassi": 9, "la community": 7, "la semplicità": 6, "l'indentazione": 4, "pandas": 3,
+            "che è gratis": 3, "il pip install": 2,
+        },
     }
     _catene = [
         (1, "traffico impazzisce la mamma di Guido mangia sempre il gelato al pistacchio di Bronte"),

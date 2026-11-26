@@ -130,11 +130,11 @@ function vistaVoto(s) {
   }
   mostra(`vota:${s.prompt}`, `
     <div class="card">
-      <p class="eyebrow">Indovina la prossima parola</p>
+      <p class="eyebrow">Come continua?</p>
       <p class="prompt">${esc(s.prompt)}<span class="puntini">…</span></p>
     </div>
     <form id="modulo" autocomplete="off">
-      <input id="parola" maxlength="40" placeholder="una parola sola" autocapitalize="none" enterkeyhint="send" aria-label="La prossima parola">
+      <input id="parola" maxlength="60" placeholder="una, due o tre parole" autocapitalize="none" enterkeyhint="send" aria-label="Come continua la frase (al massimo tre parole)">
       <button id="invia">Vota</button>
       <p class="errore" id="errore"></p>
     </form>`,
@@ -145,7 +145,7 @@ function vistaVoto(s) {
         if (!testo) return;
         $("#invia").disabled = true;
         try {
-          await api("/api/voto", { testo });
+          await api("/api/voto", { testo, prompt: s.prompt });
           cambiaVoto = false;
           ridisegna();
         } catch (err) {

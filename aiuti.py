@@ -13,6 +13,8 @@ from collections import Counter
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
 
+from sala import risposta
+
 # --- colori: uno per "chi parla", sempre lo stesso in tutti i grafici ---------
 SALA = "#2a78d6"     # blu: la sala
 MODELLO = "#eb6834"  # arancio: il modello
@@ -77,9 +79,19 @@ def elenca_voti(voti) -> list[str]:
 
 
 def leggi_voti(voti) -> Counter:
-    """Conta solo la prima parola: se la sala dice "si blocca" vale "si",
-    esattamente come farebbe il modello."""
+    """Conta solo la prima parola: "si blocca" vale "si". È il confronto onesto con
+    il modello, che sceglie un token alla volta."""
     return Counter(p for p in map(prima_parola, elenca_voti(voti)) if p)
+
+
+def leggi_risposte(voti) -> Counter:
+    """Conta le risposte intere (da una a tre parole), come le ha scritte la sala."""
+    return Counter(r for r in map(risposta, elenca_voti(voti)) if r)
+
+
+def risposta_del_modello(continuazione: str) -> str | None:
+    """La "risposta" del modello: la sua continuazione fino alla prima pausa, massimo tre parole."""
+    return risposta(re.split(r"[.,;:!?\n]", continuazione.strip(), maxsplit=1)[0])
 
 
 def percento(p: float) -> str:

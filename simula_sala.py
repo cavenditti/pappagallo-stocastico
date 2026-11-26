@@ -21,14 +21,18 @@ from sala import Sala
 BASE = "http://127.0.0.1:8000"
 _apri = urllib.request.build_opener(urllib.request.ProxyHandler({})).open
 
-# Cosa "pensa" la sala finta per ogni prompt (pesi = quanto è popolare la risposta).
+# Cosa "pensa" la sala finta per ogni prompt (pesi = quanto è popolare la risposta, da una a tre parole).
 RISPOSTE = {
-    "A Roma, quando piove, il traffico": {"impazzisce": 12, "aumenta": 8, "si blocca": 7, "peggiora": 4,
-                                          "è": 3, "diventa": 2, "esplode": 1, "scompare": 1},
-    "Il codice funzionava ieri sera, ma stamattina": {"non": 18, "è": 5, "esplode": 4, "no": 3, "pandas": 2},
-    "La cosa più bella di Python è": {"la": 10, "che": 6, "pandas": 4, "l'indentazione": 3, "pip": 1},
-    "Mia nonna dice sempre che la pizza": {"è": 12, "deve": 6, "con": 4, "fa": 3, "napoletana": 2},
-    "Dopo la terza birra, ogni data scientist": {"diventa": 9, "è": 6, "crede": 4, "fa": 3, "balla": 2},
+    "A Roma, quando piove, il traffico": {"impazzisce": 12, "si blocca": 8, "aumenta": 7, "va in tilt": 5,
+                                          "è un incubo": 4, "peggiora": 3, "esplode": 1, "scompare": 1},
+    "Il codice funzionava ieri sera, ma stamattina": {"non funziona più": 11, "non parte": 8, "è esploso": 5,
+                                                      "dà errore": 4, "pandas è cambiato": 3},
+    "La cosa più bella di Python è": {"la sintassi": 9, "la community": 7, "la semplicità": 6,
+                                      "l'indentazione": 4, "pandas": 3, "che è gratis": 3},
+    "Mia nonna dice sempre che la pizza": {"è sacra": 8, "con l'ananas": 6, "va mangiata calda": 4,
+                                           "fa ingrassare": 3, "napoletana è meglio": 2},
+    "Dopo la terza birra, ogni data scientist": {"diventa filosofo": 7, "parla di LLM": 6, "è in overfitting": 4,
+                                                 "balla": 3, "crede nel deep learning": 2},
 }
 # Un piccolo "cervello" a bigrammi per le catene: localmente sensato, globalmente assurdo.
 FRASI = [
@@ -69,7 +73,8 @@ def telefono(n: int, stop: threading.Event, ritmo: float) -> None:
         if s and s.get("fase") == "vota" and s["prompt"] not in votati:
             scelte = RISPOSTE.get(s["prompt"], {"boh": 1})
             time.sleep(rng.uniform(0.2, 3) * ritmo)
-            api("/api/voto", {"d": d, "testo": rng.choices(list(scelte), weights=list(scelte.values()))[0]})
+            api("/api/voto", {"d": d, "prompt": s["prompt"],
+                              "testo": rng.choices(list(scelte), weights=list(scelte.values()))[0]})
             votati.add(s["prompt"])
         elif s and s.get("fase") == "catena" and not s.get("finite"):
             t = api("/api/catena/turno", {"d": d})

@@ -2,7 +2,7 @@
 
 La sala contro il modello: un gioco in tre atti per un meetup di PyData Roma Capitale.
 
-1. **Indovina il prossimo token.** La sala vota la parola successiva dal telefono, poi un piccolo LLM aperto "vota" 300 volte campionando dalla sua distribuzione.
+1. **Indovina il prossimo token.** La sala scrive dal telefono come continua la frase (da una a tre parole), poi un piccolo LLM aperto "vota" 300 volte campionando dalla sua distribuzione.
 2. **Catena di Markov umana.** Ognuno vede solo l'ultima parola (o le ultime due) e aggiunge la successiva: un modello a n-grammi fatto di persone.
 3. **La sala addestra il modello.** Le regole e le frasi della sala cambiano il modello, prima per interpolazione (λ) e poi con un mini-batch di backpropagation.
 

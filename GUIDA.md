@@ -4,7 +4,7 @@ Un'unica esperienza in tre atti (circa 45 minuti), dove ogni atto produce i dati
 
 | Atto | Cosa fa la sala (dal telefono) | Cosa mostra il notebook | Dati prodotti |
 |---|---|---|---|
-| 1. Indovina il prossimo token | vota la parola successiva | token, probabilità, il modello che "vota" 300 volte | i voti |
+| 1. Indovina il prossimo token | scrive come continua la frase (da una a tre parole) | token, probabilità, il modello che "vota" 300 volte | i voti |
 | 2. Catena di Markov umana | aggiunge parole vedendo solo le ultime 1 o 2 | regole n-gramma, Premio Perplessità, modello smemorato | le frasi |
 | 3. La sala addestra il modello | guarda (e ride) | interpolazione λ, poi 20 passi di backprop | un modello cambiato |
 
@@ -138,10 +138,12 @@ La slide 3 è il passo 1 (il Wi-Fi), la slide 4 il passo 2 (il gioco). Resta sul
 L'ultima slide (la 9) mostra di nuovo i due QR: lasciala su un secondo schermo, o tornaci fra un atto e l'altro, per chi arriva in ritardo.
 
 ### Atto 1: Indovina il prossimo token (15')
-1. Scegli la frase nel menu, poi premi **▶️ Apri la votazione sui telefoni**.
-2. Il grafico della sala si riempie dal vivo, aggiornandosi ogni 2 secondi.
-3. Premi **⏹ Chiudi**, poi **🦜 Svela il modello**: ecco il confronto e la percentuale di accordo. Ogni clic su Svela è una nuova votazione del modello.
-4. Seguono la tabella delle vostre parole spezzate in token e lo slider della temperatura.
+1. Scegli la frase nel menu, poi premi **▶️ Apri la votazione sui telefoni**. Si risponde con **una, due o tre parole**; se qualcuno ne scrive di più, il sito tiene le prime tre.
+2. Il grafico della sala si riempie dal vivo con le risposte intere, aggiornandosi ogni 2 secondi.
+3. Premi **⏹ Chiudi**, poi **🦜 Svela il modello**. Ogni clic su Svela è una nuova votazione del modello. Compaiono due cose:
+   - il confronto sulla **prima parola**, con la percentuale di accordo. È il confronto onesto: il modello sceglie un token alla volta, e "si blocca" per lui comincia con "si";
+   - le **risposte intere**, una colonna per voi e una per il modello (che si ferma alla prima pausa, al massimo dopo tre parole). In grassetto quelle date da entrambi.
+4. Seguono la tabella delle vostre risposte spezzate in token, con la loro probabilità esatta per il modello, e lo slider della temperatura.
 5. Per il secondo giro, cambia frase e ripeti. Quella sul codice che non funziona più, con un pubblico PyData, funziona sempre.
 
 Spunto: anche la tastiera del telefono suggerisce la parola successiva, ed è un altro pappagallo stocastico.

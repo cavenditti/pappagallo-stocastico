@@ -32,6 +32,17 @@ URL_PER_MODO = {
     "hotspot": f"http://{HOTSPOT_IP}:{PORTA}",
 }
 
+# Atto 1: quante parole può scrivere la sala come risposta (le altre si tagliano).
+MAX_PAROLE_RISPOSTA = 3
+_BORDI = ".,;:!?…«»\"“”()[]{}"
+
+
+def risposta(testo: str, max_parole: int = MAX_PAROLE_RISPOSTA) -> str | None:
+    """Una risposta normalizzata: minuscole, senza punteggiatura attorno, al massimo `max_parole` parole."""
+    pezzi = [p.strip(_BORDI) for p in testo.lower().replace("’", "'").split()]
+    return " ".join([p for p in pezzi if p][:max_parole]) or None
+
+
 # urllib rispetterebbe eventuali proxy di sistema: per parlare con localhost non ne vogliamo.
 _apri = urllib.request.build_opener(urllib.request.ProxyHandler({})).open
 

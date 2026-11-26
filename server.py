@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from sala import PORTA, modo, url_da_mostrare
+from sala import MAX_PAROLE_RISPOSTA, PORTA, modo, risposta, url_da_mostrare
 
 QUI = Path(__file__).parent
 FILE_STATO = QUI / "sala.json"
@@ -104,17 +104,21 @@ def stato(d: str):
 class Voto(BaseModel):
     d: str
     testo: str
+    prompt: str | None = None  # la frase a cui il telefono sta rispondendo
 
 
 @app.post("/api/voto")
 def vota(v: Voto):
     d = controlla_id(v.d)
-    testo = " ".join(v.testo.split())[:40]
-    if not prima_parola(testo):
-        raise HTTPException(400, "Scrivi almeno una parola.")
+    testo = risposta(v.testo[:200])  # da una a tre parole: le altre si tagliano
+    if not testo:
+        quante = {1: "una", 2: "due", 3: "tre"}.get(MAX_PAROLE_RISPOSTA, str(MAX_PAROLE_RISPOSTA))
+        raise HTTPException(400, f"Scrivi da una a {quante} parole.")
     with blocco:
         if S["fase"] != "vota":
             raise HTTPException(409, "La votazione è chiusa.")
+        if v.prompt is not None and v.prompt != S["prompt"]:  # la frase è cambiata mentre scrivevi
+            raise HTTPException(409, "La frase è cambiata: guarda lo schermo e rispondi alla nuova.")
         S["voti"].setdefault(S["prompt"], {})[d] = testo  # un voto per telefono, si può cambiare
         salva()
     return {"ok": True, "mio_voto": testo}
