@@ -189,7 +189,15 @@ def _(mo, prompt_ui, sito):
 
 
 @app.cell
-def _(PROMPT, aggiorna, confronta, dati_sala, distribuzione, leggi_risposte, mo):
+def _(
+    PROMPT,
+    aggiorna,
+    confronta,
+    dati_sala,
+    distribuzione,
+    leggi_risposte,
+    mo,
+):
     aggiorna
     _d = dati_sala()
     _voti = _d["voti"].get(PROMPT, [])
@@ -538,10 +546,11 @@ def _(REGOLE, TUTTE, inizio_ui, mo, parole, random, rilancia_sala, unisci):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ### 🏆 Premio Perplessità
+    ### 🏆🦜 Pappagallo d'oro
 
     La **perplessità** misura quanto una frase sorprende il modello: $e^{\text{loss media per token}}$.
-    La frase più assurda vince una birra. Il 🦜 Pappagallo d'oro va alla più prevedibile.
+
+    La frase più assurda e la più prevedibile vincono il 🦜 **Pappagallo d'oro** (e una birra).
     """)
     return
 
@@ -582,29 +591,70 @@ def _(mo):
     mo.md(r"""
     ### Il pappagallo smemorato
 
-    E se togliessimo la memoria al modello? È la stessa rete, ma a ogni passo vede solo le ultime 1 o 2 parole.
+    E se togliessimo la memoria al modello? È la stessa rete, ma a ogni passo vede solo le ultime 1 o 2 parole della frase.
 
-    Diventa… voi.
+    Per giocare alla pari con voi gli servono due cose che voi avevate già:
+
+    1. **La cornice.** Anche vedendo una parola sola, sapevate in che lingua e in che gioco eravate. Al modello diamo una frase fissa di contesto:
+       *«Ecco un breve racconto in italiano.»*,
+    2. **Parole vere, niente coda.** Voi scrivevate parole intere e plausibili. Qui il modello tiene solo parole intere, e con temperatura 0,8 e top-p 0,9
+       non pesca quelle assurde in fondo alla distribuzione.
+
+    Così diventa… voi (kinda). In fondo, per confronto, la versione senza cornice e senza filtri: con una parola sola non sa nemmeno che lingua parla.
     """)
     return
 
 
 @app.cell
-def _(DEVICE, parole, prima_parola, tok, torch, unisci):
-    @torch.no_grad()
-    def campiona_parola(m, contesto: str, temperatura: float = 1.0) -> str | None:
-        # Il modello estrae token finché non finisce una parola: ecco una parola "scritta" dal modello.
-        enc = tok(contesto, return_tensors="pt").to(DEVICE)
-        uscita = m.generate(**enc, do_sample=True, temperature=temperatura, top_k=0, top_p=1.0,
-                            max_new_tokens=8, pad_token_id=tok.pad_token_id)
-        nuovo = tok.decode(uscita[0, enc.input_ids.shape[1]:], skip_special_tokens=True)
-        return prima_parola(nuovo, minuscole=False)
+def _(DEVICE, model, parole, prima_parola, tok, torch, unisci):
+    import re
 
-    def pappagallo_smemorato(m, inizio: str, memoria: int | None, n_parole: int = 16) -> str:
+    from transformers import LogitsProcessor, LogitsProcessorList
+
+    CORNICE = "Ecco un breve racconto in italiano.\n\n"  # quello che sapevate anche voi: lingua e tono, non la frase
+    PAROLA_INTERA = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ]+'?")  # lettere, anche accentate, con l'eventuale apostrofo
+
+    # I token che cominciano una parola nuova: spazio + lettera. Al primo passo il modello può usare solo questi,
+    # così "e" resta "e" e non diventa "era": la parola precedente è finita, come quando passate il foglio.
+    NUOVA_PAROLA = torch.zeros(model.get_output_embeddings().weight.shape[0], dtype=torch.bool)
+    NUOVA_PAROLA[: len(tok)] = torch.tensor([bool(re.match(r"\s+[^\W\d_]", tok.decode([i]))) for i in range(len(tok))])
+    NUOVA_PAROLA = NUOVA_PAROLA.to(DEVICE)
+
+    class ParolaNuova(LogitsProcessor):
+        def __init__(self, inizio: int):
+            self.inizio = inizio  # lunghezza del contesto: il primo token generato è in quella posizione
+
+        def __call__(self, input_ids, scores):
+            if input_ids.shape[1] == self.inizio:
+                scores = scores.masked_fill(~NUOVA_PAROLA, float("-inf"))
+            return scores
+
+    @torch.no_grad()
+    def campiona_parola(m, contesto: str, temperatura: float = 0.8, top_p: float = 0.9,
+                        solo_parole: bool = True, tentativi: int = 4, giri: int = 3) -> str | None:
+        # Il modello propone qualche continuazione: teniamo la prima che è una parola intera.
+        for _ in range(giri):
+            enc = tok([contesto] * tentativi, return_tensors="pt").to(DEVICE)
+            # dopo un apostrofo ("dell'" + "acqua") la parola nuova comincia senza spazio: lì niente vincolo
+            vincolo = (LogitsProcessorList([ParolaNuova(enc.input_ids.shape[1])])
+                       if solo_parole and not contesto.endswith("'") else None)
+            uscita = m.generate(**enc, do_sample=True, temperature=temperatura, top_k=0, top_p=top_p,
+                                max_new_tokens=6, pad_token_id=tok.pad_token_id, logits_processor=vincolo)
+            for nuovo in tok.batch_decode(uscita[:, enc.input_ids.shape[1]:], skip_special_tokens=True):
+                w = prima_parola(nuovo, minuscole=False)
+                if w and (not solo_parole or PAROLA_INTERA.fullmatch(w)):
+                    return w
+        return None
+
+    def pappagallo_smemorato(m, inizio: str, memoria: int | None, n_parole: int = 14,
+                             cornice: str = CORNICE, grezzo: bool = False) -> str:
+        # grezzo=True: niente filtri, si pesca da tutta la distribuzione (la versione "senza", per confronto)
+        filtri = (dict(temperatura=1.0, top_p=1.0, solo_parole=False, tentativi=1, giri=1) if grezzo else {})
         p = parole(inizio, minuscole=False)
         for _ in range(n_parole):
-            contesto = unisci(p[-memoria:] if memoria else p)  # ← qui tagliamo la memoria
-            if (w := campiona_parola(m, contesto)) is None:
+            viste = p if grezzo else [w for w in p if PAROLA_INTERA.fullmatch(w)]  # la memoria conta parole, non virgole
+            contesto = cornice + (unisci(viste[-memoria:]) if memoria else unisci(p))  # ← qui tagliamo la memoria
+            if (w := campiona_parola(m, contesto, **filtri)) is None:
                 break
             p.append(w)
         return unisci(p)
@@ -616,17 +666,21 @@ def _(DEVICE, parole, prima_parola, tok, torch, unisci):
                             max_new_tokens=n_token, pad_token_id=tok.pad_token_id)
         return tok.decode(uscita[0, enc.input_ids.shape[1]:], skip_special_tokens=True).split("\n")[0].strip()
 
-    return campiona_parola, continua, pappagallo_smemorato
+    return CORNICE, campiona_parola, continua, pappagallo_smemorato
 
 
 @app.cell
 def _(PROMPT, mo, model, pappagallo_smemorato, rilancia_smemorato):
     _ = rilancia_smemorato.value
-    _righe = []
-    for _memoria in (1, 2, None):
-        _nome = f"memoria {_memoria}" if _memoria else "memoria piena"
-        _righe.append(f"**{_nome}:** {pappagallo_smemorato(model, PROMPT, _memoria)}")
-    mo.vstack([mo.md("\n\n".join(_righe)), rilancia_smemorato])
+    _con = [f"**memoria {_m or 'piena'}:** {pappagallo_smemorato(model, PROMPT, _m)}" for _m in (1, 2, None)]
+    # Per confronto: niente cornice e niente filtri, la parola si pesca da tutta la distribuzione.
+    _senza = [f"**memoria {_m}:** {pappagallo_smemorato(model, PROMPT, _m, cornice='', grezzo=True)}"
+              for _m in (1, 2)]
+    mo.vstack([
+        mo.md("#### Con cornice e vincolo di parole intere\n\n" + "\n\n".join(_con)),
+        mo.md("#### Senza cornice e senza filtri, per confronto\n\n" + "\n\n".join(_senza)),
+        rilancia_smemorato,
+    ])
     return
 
 
@@ -655,6 +709,7 @@ def _(mo):
 
 @app.cell
 def _(
+    CORNICE,
     PROMPT,
     REGOLE,
     campiona_parola,
@@ -675,7 +730,7 @@ def _(
             if scelte and random.random() < lam:  # con probabilità λ decide la sala...
                 w, fonte = random.choices(list(scelte), weights=list(scelte.values()))[0], "sala"
             else:                                 # ...altrimenti il modello, con tutto il contesto
-                w, fonte = campiona_parola(m, unisci(p)), "modello"
+                w, fonte = campiona_parola(m, CORNICE + unisci(p)), "modello"
             if w is None:
                 break
             p.append(w)
