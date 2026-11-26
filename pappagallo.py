@@ -434,10 +434,12 @@ def _(mo):
 
 @app.cell
 def _(inizio_ui, lunghezza_ui, mo, n_catene_ui, sito):
-    _avvia = mo.ui.button(label="▶️ Avvia le catene sui telefoni", kind="success",
-                          on_click=lambda _: sito.avvia_catene(inizio_ui.value, n_catene_ui.value, lunghezza_ui.value))
-    _chiudi = mo.ui.button(label="⏹ Chiudi le catene", on_click=lambda _: sito.fase("attesa"))
-    mo.hstack([_avvia, _chiudi], justify="start")
+    # I bottoni devono avere un nome globale (senza "_" davanti): solo così marimo riceve i clic.
+    avvia_catene = mo.ui.button(label="▶️ Avvia le catene sui telefoni", kind="success",
+                                on_click=lambda _: sito.avvia_catene(inizio_ui.value, n_catene_ui.value,
+                                                                     lunghezza_ui.value))
+    chiudi_catene = mo.ui.button(label="⏹ Chiudi le catene", on_click=lambda _: sito.fase("attesa"))
+    mo.hstack([avvia_catene, chiudi_catene], justify="start")
     return
 
 
@@ -881,9 +883,9 @@ def _(mo):
     ---
     ## Epilogo
 
-    - Il modello sceglie la prossima parola **da una distribuzione di probabilità**, come avete fatto voi. Nel singolo passo non c'è nessuna magia.
-    - La differenza fra voi-a-n-grammi e il transformer sta soprattutto nel **contesto**: con memoria 1 il modello è un pappagallo smemorato quanto voi.
-    - Cambiare il comportamento costa poco: una miscela di distribuzioni ($\lambda$) oppure 20 passi di gradiente. È per questo che i dati contano più di tutto il resto.
+    - Il modello sceglie la prossima parola da una distribuzione di probabilità, **come avete fatto voi**. Nel singolo passo non c'è nessuna magia!
+    - La differenza fra voi-a-n-grammi e il transformer sta soprattutto nel **contesto**: con memoria 1 il modello è un pappagallo smemorato quanto (o più di) voi.
+    - Anche solo con 20 passaggii di discesa di gradiente la differenza è apprezzabile! È per questo che i dati contano più di tutto il resto (finché stiamo solo generando testo).
 
     🍺 Grazie!
     """)

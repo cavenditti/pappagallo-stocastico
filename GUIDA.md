@@ -5,7 +5,7 @@ Un'unica esperienza in tre atti (circa 45 minuti), dove ogni atto produce i dati
 | Atto | Cosa fa la sala (dal telefono) | Cosa mostra il notebook | Dati prodotti |
 |---|---|---|---|
 | 1. Indovina il prossimo token | scrive come continua la frase (da una a tre parole) | token, probabilità, il modello che "vota" 300 volte | i voti |
-| 2. Catena di Markov umana | aggiunge parole vedendo solo le ultime 1 o 2 | regole n-gramma, Premio Perplessità, modello smemorato | le frasi |
+| 2. Catena di Markov umana | aggiunge parole vedendo solo le ultime 1 o 2 | regole n-gramma, Pappagallo d'oro (perplessità), modello smemorato | le frasi |
 | 3. La sala addestra il modello | guarda (e ride) | interpolazione λ, poi 20 passi di backprop | un modello cambiato |
 
 Il filo conduttore: **la sala è un modello linguistico**. Nell'Atto 1 campiona da una distribuzione, nell'Atto 2 è un n-gramma, nell'Atto 3 diventa i dati di addestramento.
@@ -152,7 +152,7 @@ Spunto: anche la tastiera del telefono suggerisce la parola successiva, ed è un
 1. Imposta la parola iniziale (di default `traffico`), il numero di catene e la lunghezza, poi premi **▶️ Avvia le catene sui telefoni**. Le catene pari mostrano 1 parola, le dispari 2.
 2. Sui telefoni compare **✍️ Tocca a me**: chi lo preme riceve una catena libera e ha 60 secondi per scrivere. La tabella di avanzamento non rivela il contenuto.
 3. Quando le catene sono complete, premi **⏹ Chiudi** e poi **🎭 Rivela le frasi**.
-4. Seguono, in ordine: le regole della sala, la sala come generatore (le ✨ sono frasi che nessuno ha scritto), il **🏆 Premio Perplessità** (la prima frase vince la birra, l'ultima il 🦜 Pappagallo d'oro), il grafico "più contesto, meno sorpresa" e il pappagallo smemorato.
+4. Seguono, in ordine: le regole della sala, la sala come generatore (le ✨ sono frasi che nessuno ha scritto), il **🦜 Pappagallo d'oro**: la classifica per perplessità, dove la prima frase (🏆, la più assurda) e l'ultima (🦜, la più prevedibile) vincono entrambe il Pappagallo d'oro e una birra, il grafico "più contesto, meno sorpresa" e il pappagallo smemorato.
 
 Se premi due volte **Avvia**, le catene vecchie non si perdono: finiscono in `archivio_catene` dentro `sala.json`.
 
