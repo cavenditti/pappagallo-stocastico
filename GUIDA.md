@@ -31,6 +31,7 @@ Telefoni e portatile devono stare sulla **stessa rete Wi-Fi**. Internet non serv
 | Opzione | Quando va bene |
 |---|---|
 | **Router da viaggio** (alimentato via USB, nessuna SIM) | la scelta sicura per 30–50 persone |
+| Hotspot del Mac (Condivisione Internet) | il piano B: niente hardware in più e indirizzo fisso, ma va provato prima (vedi sotto) |
 | Hotspot del telefono | solo per gruppi piccoli: di solito regge una decina di dispositivi al massimo |
 | Wi-Fi della birreria | spesso isola i dispositivi fra loro, e allora i telefoni non vedono il portatile. Provalo prima |
 
@@ -43,13 +44,49 @@ Le slide stampano due QR fissi: il primo per entrare nella rete, il secondo per 
 
 **Controllo:** all'avvio, il notebook e `server.py` verificano che `pappagallo.lan` arrivi proprio a questo portatile. Se va tutto bene compare ✅. Altrimenti il notebook mostra un avviso e un QR di riserva via IP, che funziona sempre ma non è quello delle slide.
 
-**Per cambiare rete o indirizzo:** imposta `SALA_WIFI`, `SALA_WIFI_PASSWORD` e `SALA_URL`, poi rigenera i QR per le slide con il comando qui sotto. Scrive `qr/wifi.svg|png` e `qr/gioco.svg|png`; nel deck, sostituisci le immagini dei QR nelle slide 3, 4 e 9.
+**Per cambiare rete o indirizzo:** imposta `SALA_WIFI`, `SALA_WIFI_PASSWORD` e `SALA_URL`, poi rigenera i QR per le slide con il comando qui sotto. Scrive `qr/wifi`, `qr/gioco` e `qr/gioco-hotspot` (in SVG e PNG); nel deck, sostituisci le immagini dei QR nelle slide che usano quei codici.
 
 ```bash
 uv run python sala.py
 ```
 
 Se il portatile ha più interfacce di rete e il notebook sceglie quella sbagliata, forzala con `SALA_HOST=192.168.x.y`.
+
+### Piano B: l'hotspot del Mac
+
+Il Mac può creare da sé la rete `pappagallo` con Condivisione Internet. Il vantaggio: il Mac è il router, quindi il suo indirizzo è fisso (di solito `192.168.2.1`) e non c'è niente da configurare per il nome. Il codice se ne accorge da solo: quando la condivisione è attiva passa in modo **hotspot** e usa `http://192.168.2.1:8000`.
+
+I limiti:
+
+- **Serve una connessione da condividere.** Senza, macOS può smettere di trasmettere la rete. Usa l'iPhone collegato via USB. I telefoni del pubblico non usano Internet: parlano solo con il portatile.
+- **Apple non dichiara quanti dispositivi regge.** È un'antenna sola, quella del portatile che intanto fa girare il modello: con 40 telefoni va provato.
+- **Il Wi-Fi del Mac diventa la rete del gioco,** quindi il portatile non può collegarsi ad altri Wi-Fi nel frattempo.
+
+**Come si accende:**
+
+1. Collega l'iPhone via USB, con l'hotspot personale attivo.
+2. In Impostazioni di Sistema › Generali › Condivisione › Condivisione Internet › ⓘ: "Condividi la connessione da" → **iPhone USB**; "Ai dispositivi che utilizzano" → **Wi-Fi**.
+3. In Opzioni Wi-Fi: nome **`pappagallo`**, sicurezza WPA2/WPA3 Personal, password **`pydataroma`**. Poi attiva Condivisione Internet.
+4. Controlla l'indirizzo del Mac sulla nuova rete. Deve essere `192.168.2.1`; se è diverso, imposta `SALA_HOTSPOT_IP`, rigenera i QR e aggiorna le slide:
+
+   ```bash
+   ipconfig getifaddr bridge100
+   ```
+
+5. Avvia `server.py` e il notebook come al solito: in cima deve comparire "✅ Rete: **hotspot del Mac**".
+
+**Le slide:** il deck contiene già le due varianti per l'hotspot, nascoste: `gioco-hotspot` subito dopo la slide del gioco, e `qr-finale-hotspot` in fondo. Nel deck, nascondi `gioco` e `qr-finale` e mostra le due varianti. La slide del Wi-Fi è la stessa nei due casi.
+
+**La prova a casa (obbligatoria):**
+
+1. Accendi la condivisione e collega 3–4 telefoni al gioco.
+2. Lancia anche la sala finta, per avere carico vero:
+
+   ```bash
+   uv run python simula_sala.py --pilota
+   ```
+
+3. Spegni i dati mobili dell'iPhone di uscita: la rete `pappagallo` deve restare su, e i telefoni devono continuare a giocare. Se cade, in birreria serve il router.
 
 ### E un captive portal?
 

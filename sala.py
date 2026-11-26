@@ -4,31 +4,72 @@ Il notebook usa `Sala` per aprire e chiudere le votazioni, avviare le catene e
 leggere i dati. Le chiamate di amministrazione funzionano solo da questo
 portatile: il server le accetta soltanto da 127.0.0.1.
 
-    uv run python sala.py    # rigenera i QR delle slide in qr/ (wifi e gioco)
+    uv run python sala.py    # rigenera i QR delle slide in qr/ (wifi e gioco, per le due reti)
+
+Due modi di fare la rete, entrambi senza Internet per i telefoni:
+- "router": un router da viaggio; il gioco è su http://pappagallo.lan:8000
+- "hotspot": il Mac stesso (Condivisione Internet); il gioco è su http://192.168.2.1:8000
+Il modo si riconosce da solo (se il Mac sta condividendo è "hotspot"), oppure si forza con SALA_MODO.
 """
 from __future__ import annotations
 
 import json
 import os
 import socket
+import subprocess
+import sys
 import urllib.parse
 import urllib.request
 
 PORTA = int(os.environ.get("SALA_PORTA", "8000"))
-# La rete del router da viaggio e l'indirizzo fisso del gioco: sono stampati
-# (come QR) sulle slide, quindi il router va configurato così.
+# Nome e password della rete, uguali nei due modi: sono stampati (come QR) sulle slide.
 WIFI_NOME = os.environ.get("SALA_WIFI", "pappagallo")
 WIFI_PASSWORD = os.environ.get("SALA_WIFI_PASSWORD", "pydataroma")
-URL_GIOCO = os.environ.get("SALA_URL", f"http://pappagallo.lan:{PORTA}")
+# L'indirizzo che macOS dà di solito al Mac quando fa da hotspot (Condivisione Internet).
+HOTSPOT_IP = os.environ.get("SALA_HOTSPOT_IP", "192.168.2.1")
+URL_PER_MODO = {
+    "router": f"http://pappagallo.lan:{PORTA}",
+    "hotspot": f"http://{HOTSPOT_IP}:{PORTA}",
+}
 
 # urllib rispetterebbe eventuali proxy di sistema: per parlare con localhost non ne vogliamo.
 _apri = urllib.request.build_opener(urllib.request.ProxyHandler({})).open
 
 
+def ip_hotspot() -> str | None:
+    """Se il Mac sta facendo da hotspot (Condivisione Internet), il suo IP su quella rete."""
+    if sys.platform != "darwin":
+        return None
+    for interfaccia in ("bridge100", "bridge101"):  # le interfacce che crea Condivisione Internet
+        try:
+            uscita = subprocess.run(["ipconfig", "getifaddr", interfaccia],
+                                    capture_output=True, text=True, timeout=2)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if uscita.returncode == 0 and uscita.stdout.strip():
+            return uscita.stdout.strip()
+    return None
+
+
+def modo() -> str:
+    """'hotspot' se il Mac sta condividendo la connessione, altrimenti 'router' (forzabile con SALA_MODO)."""
+    forzato = os.environ.get("SALA_MODO", "").strip().lower()
+    if forzato in URL_PER_MODO:
+        return forzato
+    return "hotspot" if ip_hotspot() else "router"
+
+
+def url_gioco() -> str:
+    """L'indirizzo fisso stampato sulle slide per il modo attuale (forzabile con SALA_URL)."""
+    return os.environ.get("SALA_URL") or URL_PER_MODO[modo()]
+
+
 def indirizzo_locale() -> str:
-    """L'IP di questo portatile sulla rete del router o dell'hotspot (forzabile con SALA_HOST)."""
+    """L'IP con cui i telefoni vedono questo portatile (forzabile con SALA_HOST)."""
     if host := os.environ.get("SALA_HOST"):
         return host
+    if ip := ip_hotspot():  # col Mac come hotspot i telefoni lo vedono lì, non sulla rete di uscita
+        return ip
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("10.255.255.255", 1))  # non spedisce niente: serve solo a scegliere l'interfaccia
@@ -45,8 +86,10 @@ def url_pubblico() -> str:
 
 
 def controlla_url_gioco() -> tuple[bool, str]:
-    """Il QR delle slide porta a URL_GIOCO: su questa rete arriva davvero a questo portatile?"""
-    host = urllib.parse.urlparse(URL_GIOCO).hostname or ""
+    """Il QR delle slide porta a url_gioco(): su questa rete arriva davvero a questo portatile?"""
+    if modo() == "hotspot" and not ip_hotspot():
+        return False, "modo hotspot, ma Condivisione Internet non è attiva (nessuna interfaccia bridge100)"
+    host = urllib.parse.urlparse(url_gioco()).hostname or ""
     locale = indirizzo_locale()
     try:
         ip = socket.gethostbyname(host)
@@ -54,13 +97,13 @@ def controlla_url_gioco() -> tuple[bool, str]:
         return False, f"`{host}` non si risolve su questa rete (manca il nome sul router?)"
     if ip != locale:
         return False, f"`{host}` porta a {ip}, ma questo portatile è a {locale}"
-    return True, f"`{host}` porta a questo portatile ({locale})"
+    return True, f"`{host}` porta a questo portatile"
 
 
 def url_da_mostrare() -> tuple[str, bool, str]:
     """L'indirizzo fisso se funziona, altrimenti quello via IP (con il motivo)."""
     ok, motivo = controlla_url_gioco()
-    return (URL_GIOCO if ok else url_pubblico()), ok, motivo
+    return (url_gioco() if ok else url_pubblico()), ok, motivo
 
 
 def _qr_gioco(testo: str):
@@ -90,7 +133,10 @@ def salva_qr_slide(cartella: str = "qr") -> list[str]:
 
     Path(cartella).mkdir(exist_ok=True)
     scritti = []
-    for nome, qr in (("wifi", _qr_wifi()), ("gioco", _qr_gioco(URL_GIOCO))):
+    codici = (("wifi", _qr_wifi()),
+              ("gioco", _qr_gioco(URL_PER_MODO["router"])),
+              ("gioco-hotspot", _qr_gioco(URL_PER_MODO["hotspot"])))
+    for nome, qr in codici:
         for estensione in ("svg", "png"):
             percorso = f"{cartella}/{nome}.{estensione}"
             qr.save(percorso, scale=20, border=2, dark="#1B2A22", light="#FFFDF7")
@@ -138,8 +184,10 @@ class Sala:
 
 if __name__ == "__main__":
     print(f"Wi-Fi: {WIFI_NOME} / {WIFI_PASSWORD}")
-    print(f"Gioco: {URL_GIOCO}")
+    for nome, url in URL_PER_MODO.items():
+        print(f"Gioco ({nome}): {url}")
     for percorso in salva_qr_slide():
         print("  scritto", percorso)
     ok, motivo = controlla_url_gioco()
+    print(f"Modo attuale: {modo()} → {url_gioco()}")
     print(("✅ " if ok else "⚠️  ") + motivo.replace("`", ""))

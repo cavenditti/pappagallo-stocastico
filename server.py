@@ -21,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from sala import PORTA, url_da_mostrare
+from sala import PORTA, modo, url_da_mostrare
 
 QUI = Path(__file__).parent
 FILE_STATO = QUI / "sala.json"
@@ -254,7 +254,7 @@ if __name__ == "__main__":
     import segno
 
     url, ok, motivo = url_da_mostrare()
-    print(f"\n🦜  Il sito della sala è su  {url}")
+    print(f"\n🦜  Il sito della sala è su  {url}   (rete: {modo()})")
     print(("✅  " if ok else "⚠️   il QR delle slide non porta qui: ") + motivo.replace("`", "") + "\n")
     segno.make(url, error="m").terminal(compact=True)
     print("\n(il palco, cioè il notebook, parla con http://127.0.0.1:%d)\n" % PORTA)

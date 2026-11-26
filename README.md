@@ -27,6 +27,6 @@ La guida completa per chi conduce, con la rete, la scaletta e cosa fare se qualc
 | `pappagallo.py` | il notebook marimo: palco e pannello di controllo |
 | `server.py`, `sito/index.html` | il sito per i telefoni (voti e catene) |
 | `sala.py` | il collegamento fra notebook e sito, i QR (Wi-Fi e gioco) e il controllo dell’indirizzo |
-| `qr/` | i QR delle slide; si rigenerano con `uv run python sala.py` |
+| `qr/` | i QR delle slide (Wi-Fi, gioco col router, gioco con l’hotspot del Mac); si rigenerano con `uv run python sala.py` |
 | `aiuti.py` | grafici e utilità di testo |
 | `simula_sala.py` | una sala finta per le prove |

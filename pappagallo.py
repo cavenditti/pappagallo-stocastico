@@ -19,14 +19,46 @@ def _():
     from aiuti import (accordo, confronta, distribuzione, elenca_voti, frase_evidenziata, grafico_loss,
                        grafico_perplessita, grafico_token, leggi_voti, numero, parole, percento,
                        prima_parola, stile, unisci, visibile)
-    from sala import URL_GIOCO, WIFI_NOME, WIFI_PASSWORD, Sala, qr_svg, qr_wifi_svg, url_da_mostrare
+    from sala import WIFI_NOME, WIFI_PASSWORD, Sala, modo, qr_svg, qr_wifi_svg, url_da_mostrare, url_gioco
 
     stile()
     IN_NOTEBOOK = mo.running_in_notebook()  # da script (prova generale) i bottoni si considerano premuti
-    return (AutoModelForCausalLM, AutoTokenizer, Counter, IN_NOTEBOOK, Sala, URL_GIOCO, WIFI_NOME, WIFI_PASSWORD,
-            accordo, confronta, copy, defaultdict, distribuzione, elenca_voti, frase_evidenziata, gc, grafico_loss,
-            grafico_perplessita, grafico_token, leggi_voti, math, mo, numero, parole, percento, prima_parola,
-            qr_svg, qr_wifi_svg, random, torch, unisci, url_da_mostrare, visibile)
+    return (
+        AutoModelForCausalLM,
+        AutoTokenizer,
+        Counter,
+        IN_NOTEBOOK,
+        Sala,
+        WIFI_NOME,
+        WIFI_PASSWORD,
+        accordo,
+        confronta,
+        copy,
+        defaultdict,
+        distribuzione,
+        elenca_voti,
+        frase_evidenziata,
+        gc,
+        grafico_loss,
+        grafico_perplessita,
+        grafico_token,
+        leggi_voti,
+        math,
+        mo,
+        modo,
+        numero,
+        parole,
+        percento,
+        prima_parola,
+        qr_svg,
+        qr_wifi_svg,
+        random,
+        torch,
+        unisci,
+        url_da_mostrare,
+        url_gioco,
+        visibile,
+    )
 
 
 @app.cell(hide_code=True)
@@ -47,7 +79,7 @@ def _(mo):
 @app.cell
 def _(AutoModelForCausalLM, AutoTokenizer, mo, torch):
     MODEL_ID = "Qwen/Qwen3-0.6B-Base"  # "base", non "instruct": vogliamo il pappagallo, non l'assistente
-    # alternative: "Qwen/Qwen2.5-0.5B" · "sapienzanlp/Minerva-350M-base-v1.0" (italiano nativo, termini da accettare su HF)
+    # alternative:"Qwen/Qwen2.5-0.5B" · "sapienzanlp/Minerva-350M-base-v1.0" (italiano nativo, termini da accettare su HF)
     DEVICE = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
 
     tok = AutoTokenizer.from_pretrained(MODEL_ID)
@@ -61,14 +93,27 @@ def _(AutoModelForCausalLM, AutoTokenizer, mo, torch):
 
 
 @app.cell
-def _(Sala, URL_GIOCO, WIFI_NOME, WIFI_PASSWORD, mo, qr_svg, qr_wifi_svg, url_da_mostrare):
+def _(
+    Sala,
+    WIFI_NOME,
+    WIFI_PASSWORD,
+    mo,
+    modo,
+    qr_svg,
+    qr_wifi_svg,
+    url_da_mostrare,
+    url_gioco,
+):
     sito = Sala()
-    # Le slide puntano a URL_GIOCO: se su questa rete non arriva qui, mostriamo l'indirizzo via IP.
+    # Le slide puntano a un indirizzo fisso (router: pappagallo.lan, hotspot del Mac: 192.168.2.1):
+    # se su questa rete non arriva qui, mostriamo l'indirizzo via IP.
     _url, _ok, _motivo = url_da_mostrare()
+    _rete = {"router": "router da viaggio", "hotspot": "hotspot del Mac"}[modo()]
     aggiorna = mo.ui.refresh(options=["1s", "2s", "5s"], default_interval="2s", label="live")
-    _avviso = (mo.md(f"✅ Il QR delle slide funziona: {_motivo}.") if _ok else
-               mo.callout(mo.md(f"**Il QR del gioco sulle slide non porta qui**: {_motivo}. "
-                                f"Fai inquadrare questo, oppure aggiungi `{URL_GIOCO}` sul router."), kind="warn"))
+    _avviso = (mo.md(f"✅ Rete: **{_rete}**. Il QR delle slide funziona: {_motivo}.") if _ok else
+               mo.callout(mo.md(f"**Rete: {_rete}. Il QR del gioco sulle slide (`{url_gioco()}`) non porta qui**: "
+                                f"{_motivo}. Fai inquadrare questo QR, oppure sistema la rete (vedi GUIDA.md)."),
+                          kind="warn"))
     mo.vstack([
         mo.md("## 📱 Entra nella sala"),
         mo.hstack([
@@ -92,6 +137,7 @@ def _(DEMO_CATENE, DEMO_VOTI, sito):
             return {**dati, "fonte": "🟢 dati dal sito"}
         return {"fase": None, "prompt": None, "voti": DEMO_VOTI, "catene": DEMO_CATENE, "persone": 0,
                 "connessi": 0, "fonte": "🔴 sito spento (`uv run python server.py`): uso i dati di esempio"}
+
     return (dati_sala,)
 
 
@@ -183,6 +229,7 @@ def _(DEVICE, tok, torch):
     def top_token(m, prompt: str, k: int = 15, temperatura: float = 1.0):
         valori, indici = prossimo_token(m, prompt, temperatura).topk(k)
         return [(tok.decode([i]), v) for i, v in zip(indici.tolist(), valori.tolist())]
+
     return (top_token,)
 
 
@@ -212,6 +259,7 @@ def _(Counter, DEVICE, prima_parola, tok, torch):
                             max_new_tokens=6, pad_token_id=tok.pad_token_id)
         continuazioni = tok.batch_decode(uscita[:, enc.input_ids.shape[1]:], skip_special_tokens=True)
         return Counter(p for p in map(prima_parola, continuazioni) if p)
+
     return (il_modello_vota,)
 
 
@@ -223,8 +271,19 @@ def _(mo):
 
 
 @app.cell
-def _(IN_NOTEBOOK, PROMPT, accordo, confronta, dati_sala, distribuzione, il_modello_vota, leggi_voti, mo,
-      model, svela):
+def _(
+    IN_NOTEBOOK,
+    PROMPT,
+    accordo,
+    confronta,
+    dati_sala,
+    distribuzione,
+    il_modello_vota,
+    leggi_voti,
+    mo,
+    model,
+    svela,
+):
     mo.stop(IN_NOTEBOOK and not svela.value,
             mo.md("*Chiudi la votazione, poi premi **Svela il modello**. Ogni clic è una nuova votazione del modello.*"))
     p_sala = distribuzione(leggi_voti(dati_sala()["voti"].get(PROMPT, [])))
@@ -264,6 +323,7 @@ def _(DEVICE, math, model, tok, torch):
         catena = sum(logp[n - 1 + j, t] for j, t in enumerate(pezzi[0]))  # regola della catena
         fine = torch.logsumexp(logp[-1][INIZIA_PAROLA], dim=0)  # ...e poi la parola finisce
         return math.exp((catena + fine).item()), [tok.decode([t]) for t in pezzi[0]]
+
     return (prob_parola,)
 
 
@@ -454,7 +514,18 @@ def _(mo):
 
 
 @app.cell
-def _(DEVICE, FRASI_CATENA, FRASI_NORMALI, grafico_perplessita, math, mo, model, numero, tok, torch):
+def _(
+    DEVICE,
+    FRASI_CATENA,
+    FRASI_NORMALI,
+    grafico_perplessita,
+    math,
+    mo,
+    model,
+    numero,
+    tok,
+    torch,
+):
     @torch.no_grad()
     def perplessita(m, frase: str) -> float:
         ids = tok(frase, return_tensors="pt").input_ids.to(DEVICE)
@@ -511,6 +582,7 @@ def _(DEVICE, parole, prima_parola, tok, torch, unisci):
         uscita = m.generate(**enc, do_sample=True, temperature=temperatura, top_k=0, top_p=1.0,
                             max_new_tokens=n_token, pad_token_id=tok.pad_token_id)
         return tok.decode(uscita[0, enc.input_ids.shape[1]:], skip_special_tokens=True).split("\n")[0].strip()
+
     return campiona_parola, continua, pappagallo_smemorato
 
 
@@ -549,8 +621,19 @@ def _(mo):
 
 
 @app.cell
-def _(PROMPT, REGOLE, campiona_parola, frase_evidenziata, lam_ui, mo, model, parole, random,
-      rilancia_lambda, unisci):
+def _(
+    PROMPT,
+    REGOLE,
+    campiona_parola,
+    frase_evidenziata,
+    lam_ui,
+    mo,
+    model,
+    parole,
+    random,
+    rilancia_lambda,
+    unisci,
+):
     def pappagallo_ascolta_la_sala(m, inizio: str, lam: float, memoria: int = 1, n_parole: int = 20) -> str:
         p = parole(inizio, minuscole=False)
         n_inizio, fonti = len(p), []
@@ -617,6 +700,7 @@ def _(DEVICE, mo, random, tok, torch):
                 barra.update(subtitle=f"loss {loss.item():.3f}")
         m.eval()
         return perdite
+
     return (addestra,)
 
 
@@ -631,8 +715,21 @@ def _(mo):
 
 
 @app.cell
-def _(DEVICE, IN_NOTEBOOK, addestra, addestra_btn, copy, esempi, gc, grafico_loss, lr_ui, mo, model,
-      passi_ui, torch):
+def _(
+    DEVICE,
+    IN_NOTEBOOK,
+    addestra,
+    addestra_btn,
+    copy,
+    esempi,
+    gc,
+    grafico_loss,
+    lr_ui,
+    mo,
+    model,
+    passi_ui,
+    torch,
+):
     mo.stop(IN_NOTEBOOK and not addestra_btn.value, mo.md("*Premi **Addestra con la sala** quando sei pronto.*"))
     gc.collect()
     if DEVICE == "mps":
@@ -644,8 +741,19 @@ def _(DEVICE, IN_NOTEBOOK, addestra, addestra_btn, copy, esempi, gc, grafico_los
 
 
 @app.cell
-def _(PROMPT, VOTI_SALA, accordo, confronta, distribuzione, il_modello_vota, leggi_voti, mo, model,
-      model_sala, perdite):
+def _(
+    PROMPT,
+    VOTI_SALA,
+    accordo,
+    confronta,
+    distribuzione,
+    il_modello_vota,
+    leggi_voti,
+    mo,
+    model,
+    model_sala,
+    perdite,
+):
     mo.stop(not VOTI_SALA, mo.md("*Nessun voto dall'Atto 1 da confrontare.*"))
     PROMPT_TEST = PROMPT if PROMPT in VOTI_SALA else next(iter(VOTI_SALA))
     _sala = distribuzione(leggi_voti(VOTI_SALA[PROMPT_TEST]))
