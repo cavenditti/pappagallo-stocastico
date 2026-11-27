@@ -885,7 +885,7 @@ def _(mo):
 
     - Il modello sceglie la prossima parola da una distribuzione di probabilità, **come avete fatto voi**. Nel singolo passo non c'è nessuna magia!
     - La differenza fra voi-a-n-grammi e il transformer sta soprattutto nel **contesto**: con memoria 1 il modello è un pappagallo smemorato quanto (o più di) voi.
-    - Anche solo con 20 passaggii di discesa di gradiente la differenza è apprezzabile! È per questo che i dati contano più di tutto il resto (finché stiamo solo generando testo).
+    - Anche solo con 20 passaggi di discesa di gradiente la differenza è apprezzabile! È per questo che i dati contano più di tutto il resto (finché stiamo solo generando testo).
 
     🍺 Grazie!
     """)

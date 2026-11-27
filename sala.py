@@ -7,12 +7,14 @@ portatile: il server le accetta soltanto da 127.0.0.1.
     uv run python sala.py    # rigenera i QR delle slide in qr/ (wifi e gioco, per le due reti)
 
 Due modi di fare la rete, entrambi senza Internet per i telefoni:
-- "router": un router da viaggio; il gioco è su http://pappagallo.lan:8000
+- "router": un router qualsiasi; il gioco è su http://INDIRIZZO_ROUTER:8000, dove INDIRIZZO_ROUTER
+  è un nome impostato sul router (pappagallo.lan) oppure l'IP fisso del portatile (es. 192.168.1.200)
 - "hotspot": il Mac stesso (Condivisione Internet); il gioco è su http://192.168.2.1:8000
 Il modo si riconosce da solo (se il Mac sta condividendo è "hotspot"), oppure si forza con SALA_MODO.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import socket
@@ -25,10 +27,13 @@ PORTA = int(os.environ.get("SALA_PORTA", "8000"))
 # Nome e password della rete, uguali nei due modi: sono stampati (come QR) sulle slide.
 WIFI_NOME = os.environ.get("SALA_WIFI", "pappagallo")
 WIFI_PASSWORD = os.environ.get("SALA_WIFI_PASSWORD", "pydataroma")
+# Col router: dove trovano il portatile i telefoni (ed è quello che c'è sul QR delle slide).
+# Un nome, se il router permette di aggiungerne uno; altrimenti l'IP fisso che dai al portatile (vedi GUIDA).
+INDIRIZZO_ROUTER = os.environ.get("SALA_INDIRIZZO", "pappagallo.lan")
 # L'indirizzo che macOS dà di solito al Mac quando fa da hotspot (Condivisione Internet).
 HOTSPOT_IP = os.environ.get("SALA_HOTSPOT_IP", "192.168.2.1")
 URL_PER_MODO = {
-    "router": f"http://pappagallo.lan:{PORTA}",
+    "router": f"http://{INDIRIZZO_ROUTER}:{PORTA}",
     "hotspot": f"http://{HOTSPOT_IP}:{PORTA}",
 }
 
@@ -102,6 +107,13 @@ def controlla_url_gioco() -> tuple[bool, str]:
         return False, "modo hotspot, ma Condivisione Internet non è attiva (nessuna interfaccia bridge100)"
     host = urllib.parse.urlparse(url_gioco()).hostname or ""
     locale = indirizzo_locale()
+    try:
+        ipaddress.ip_address(host)
+        e_un_ip = True
+    except ValueError:
+        e_un_ip = False
+    if e_un_ip and host != locale:
+        return False, f"le slide puntano a `{host}`, ma questo portatile è a {locale}: dagli l'IP fisso {host}"
     try:
         ip = socket.gethostbyname(host)
     except OSError:

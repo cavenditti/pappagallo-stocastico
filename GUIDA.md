@@ -30,25 +30,32 @@ Telefoni e portatile devono stare sulla **stessa rete Wi-Fi**. Internet non serv
 
 | Opzione | Quando va bene |
 |---|---|
-| **Router da viaggio** (alimentato via USB, nessuna SIM) | la scelta sicura per 30–50 persone |
+| **Un router qualsiasi** (anche uno di casa riciclato, senza Internet) | la scelta sicura per 30–50 persone |
 | Hotspot del Mac (Condivisione Internet) | il piano B: niente hardware in più e indirizzo fisso, ma va provato prima (vedi sotto) |
 | Hotspot del telefono | solo per gruppi piccoli: di solito regge una decina di dispositivi al massimo |
 | Wi-Fi della birreria | spesso isola i dispositivi fra loro, e allora i telefoni non vedono il portatile. Provalo prima |
 
-### Le due cose da impostare sul router
+### Il router: cosa impostare
 
-Le slide stampano due QR fissi: il primo per entrare nella rete, il secondo per aprire il gioco. Il router va configurato perché tutti e due funzionino.
+Le slide stampano due QR fissi: il primo per entrare nella rete, il secondo per aprire il gioco. Va bene un router di casa qualsiasi, anche senza Internet. Nelle sue impostazioni:
 
 1. **Wi-Fi `pappagallo`, password `pydataroma` (WPA2).** È il QR della slide 3, "inquadra e collegati".
-2. **Il nome `pappagallo.lan` deve puntare al portatile.** È il QR della slide 4, `http://pappagallo.lan:8000`. Sul router fai due cose: una *prenotazione DHCP* (il portatile riceve sempre lo stesso IP) e un *nome host* `pappagallo` per quell'IP. Su OpenWrt/LuCI le trovi in Network › DHCP and DNS › Static Leases (con Hostname `pappagallo`); i router GL.iNet hanno di solito le stesse voci nell'interfaccia avanzata.
+2. **Spazio per tutti:** l'intervallo DHCP deve avere almeno 60 indirizzi. Alcuni router di fabbrica ne danno 50, e con 45 telefoni più il portatile si è al limite.
+3. **Niente isolamento dei client:** usa la rete Wi-Fi principale, non quella "ospiti", che di solito impedisce ai telefoni di vedere il portatile.
+4. **Un indirizzo fisso per il portatile.** È quello del QR della slide 4. Ci sono tre strade, dalla più comoda:
+   - **un nome**, se il router lo permette. Su OpenWrt: Network › DHCP and DNS › Static Leases, con Hostname `pappagallo`, e diventa `pappagallo.lan`. Su una FRITZ!Box, il nome del dispositivo funziona già come `nome.fritz.box`.
+   - **una prenotazione DHCP** sul router: il portatile riceve sempre lo stesso IP. La trovi come "prenotazione indirizzo", "DHCP statico" o simili; su FRITZ!Box è "Assegna sempre lo stesso indirizzo IPv4 a questo dispositivo". Su macOS, per questa rete imposta "Indirizzo Wi-Fi privato" su **Fisso** (o disattivalo), altrimenti il router non riconosce il Mac.
+   - **un IP manuale sul Mac**, senza toccare il router: in Impostazioni di Sistema › Wi-Fi › (la rete `pappagallo`) › Dettagli › TCP/IP, scegli "Utilizzo di DHCP con indirizzo manuale" e metti un indirizzo **fuori** dall'intervallo DHCP del router (per esempio `.200` se il router assegna da `.100` a `.199`).
 
-**Controllo:** all'avvio, il notebook e `server.py` verificano che `pappagallo.lan` arrivi proprio a questo portatile. Se va tutto bene compare ✅. Altrimenti il notebook mostra un avviso e un QR di riserva via IP, che funziona sempre ma non è quello delle slide.
-
-**Per cambiare rete o indirizzo:** imposta `SALA_WIFI`, `SALA_WIFI_PASSWORD` e `SALA_URL`, poi rigenera i QR per le slide con il comando qui sotto. Scrive `qr/wifi`, `qr/gioco` e `qr/gioco-hotspot` (in SVG e PNG); nel deck, sostituisci le immagini dei QR nelle slide che usano quei codici.
+**Poi scrivi l'indirizzo nel codice e rigenera i QR.** In `sala.py` imposta `INDIRIZZO_ROUTER` (un nome come `pappagallo.lan` oppure l'IP, per esempio `192.168.1.200`) e lancia:
 
 ```bash
 uv run python sala.py
 ```
+
+Scrive `qr/wifi`, `qr/gioco` e `qr/gioco-hotspot` (in SVG e PNG). Nel deck, sostituisci il QR del gioco nelle slide 4 e 9 con il nuovo `qr/gioco`, oppure chiedi a Claude di farlo. Le stesse impostazioni si possono dare con le variabili `SALA_INDIRIZZO`, `SALA_WIFI` e `SALA_WIFI_PASSWORD`.
+
+**Controllo:** all'avvio, il notebook e `server.py` verificano che l'indirizzo delle slide arrivi proprio a questo portatile. Se va tutto bene compare ✅. Altrimenti il notebook mostra un avviso e un QR di riserva via IP, che funziona sempre ma non è quello delle slide.
 
 Se il portatile ha più interfacce di rete e il notebook sceglie quella sbagliata, forzala con `SALA_HOST=192.168.x.y`.
 
@@ -128,7 +135,7 @@ Una prova completa di tutto il notebook (`uv run python pappagallo.py`) dura cir
 ## La sera
 
 1. Accendi il router e collega il portatile.
-2. Avvia `uv run python server.py`: stampa l'indirizzo, un QR code e il controllo su `pappagallo.lan` (✅ o ⚠️). Se macOS chiede di accettare connessioni in entrata per Python, rispondi **Consenti**.
+2. Avvia `uv run python server.py`: stampa l'indirizzo, un QR code e il controllo sull'indirizzo delle slide (✅ o ⚠️). Se macOS chiede di accettare connessioni in entrata per Python, rispondi **Consenti**.
 3. Avvia `HF_HUB_OFFLINE=1 uv run marimo edit pappagallo.py` e porta lo zoom del browser al 125–150%. In alto, il notebook mostra i due QR (prima il Wi-Fi, poi il gioco), `🟢 dati dal sito` e quanti telefoni sono collegati.
 4. Proietta le slide (dal PDF).
 
