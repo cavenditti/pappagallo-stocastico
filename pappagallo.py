@@ -109,24 +109,24 @@ def _(
     url_gioco,
 ):
     sito = Sala()
-    # Le slide puntano a un indirizzo fisso (router: pappagallo.lan, hotspot del Mac: 192.168.2.1):
-    # se su questa rete non arriva qui, mostriamo l'indirizzo via IP.
+    # Le slide puntano a un indirizzo fisso: online quello di Tailscale Funnel, col router il suo IP,
+    # con l'hotspot del Mac 192.168.2.1. Se sulla rete locale non arriva qui, mostriamo l'indirizzo via IP.
     _url, _ok, _motivo = url_da_mostrare()
-    _rete = {"router": "router da viaggio", "hotspot": "hotspot del Mac"}[modo()]
+    _rete = {"online": "Internet (Tailscale Funnel)", "router": "router", "hotspot": "hotspot del Mac"}[modo()]
     aggiorna = mo.ui.refresh(options=["1s", "2s", "5s"], default_interval="2s", label="live")
     _avviso = (mo.md(f"✅ Rete: **{_rete}**. Il QR delle slide funziona: {_motivo}.") if _ok else
                mo.callout(mo.md(f"**Rete: {_rete}. Il QR del gioco sulle slide (`{url_gioco()}`) non porta qui**: "
-                                f"{_motivo}. Fai inquadrare questo QR, oppure sistema la rete (vedi GUIDA.md)."),
+                                f"{_motivo}. Sistema la rete (vedi GUIDA.md) prima di far inquadrare il QR."),
                           kind="warn"))
-    mo.vstack([
-        mo.md("## 📱 Entra nella sala"),
-        mo.hstack([
+    _gioco = mo.vstack([mo.Html(qr_svg(_url, scala=6)), mo.md(f"**Il gioco**<br>`{_url}`")], align="center")
+    if modo() != "online":  # online basta la connessione del telefono: niente Wi-Fi
+        _gioco = mo.hstack([
             mo.vstack([mo.Html(qr_wifi_svg(scala=6)),
                        mo.md(f"**1 · Wi-Fi** `{WIFI_NOME}`<br>password `{WIFI_PASSWORD}`")], align="center"),
-            mo.vstack([mo.Html(qr_svg(_url, scala=6)),
-                       mo.md(f"**2 · Il gioco**<br>`{_url}`")], align="center"),
-            aggiorna,
-        ], justify="start", align="center", gap=3),
+            _gioco], gap=3)
+    mo.vstack([
+        mo.md("## 📱 Entra nella sala"),
+        mo.hstack([_gioco, aggiorna], justify="start", align="center", gap=3),
         _avviso,
     ])
     return aggiorna, sito

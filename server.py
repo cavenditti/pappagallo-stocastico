@@ -3,15 +3,19 @@
     uv run python server.py
 
 Ascolta su tutte le interfacce (porta 8000) e stampa l'indirizzo e un QR code.
-Non serve Internet: basta che telefoni e portatile siano sulla stessa rete
-(un router da viaggio o un hotspot). Lo stato viene salvato in sala.json a ogni
-modifica, quindi un riavvio non perde niente.
+In modo "online" (quello previsto) accende anche Tailscale Funnel, che porta il sito su
+Internet: i telefoni usano i loro dati, niente Wi-Fi. Si spegne insieme al server.
+Con il router o l'hotspot invece Internet non serve: basta una rete comune.
+Lo stato viene salvato in sala.json a ogni modifica, quindi un riavvio non perde niente.
 """
 from __future__ import annotations
 
 import json
+import os
 import random
 import re
+import secrets
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -22,22 +26,35 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from sala import MAX_PAROLE_RISPOSTA, PORTA, modo, risposta, url_da_mostrare
+from sala import FILE_PALCO, MAX_PAROLE_RISPOSTA, PORTA, modo, risposta, tailscale_cli, url_da_mostrare
 
 QUI = Path(__file__).parent
 FILE_STATO = QUI / "sala.json"
 PAGINA = QUI / "sito" / "index.html"
 DURATA_TURNO = 60  # secondi per scrivere la propria parola in una catena
+# Se le catene libere ti mostrerebbero solo parole che hai già visto, aspetti al massimo
+# così tanto che qualcuno ne finisca un'altra: avrà un'ultima parola nuova per te.
+ATTESA_NOVITA = 12  # secondi
 PAROLA = re.compile(r"\w+['’]?|[^\w\s]", re.UNICODE)
 ID_VALIDO = re.compile(r"[0-9a-f]{8,64}")
+# Chi parla da 127.0.0.1 non è per forza il palco: con Funnel anche Internet arriva da lì.
+# Per questo i comandi del palco vogliono un codice segreto, nuovo a ogni avvio, che il
+# notebook legge dal file .palco su questo portatile.
+CODICE_PALCO = secrets.token_urlsafe(24)
+FILE_PALCO.write_text(CODICE_PALCO)
+os.chmod(FILE_PALCO, 0o600)
+SERVER_ID = secrets.token_hex(8)  # per riconoscere questo server quando lo si chiama da fuori
 MAX_NOME = 24  # caratteri: un nome o un soprannome, per la classifica dei Pappagalli d'oro
 
 blocco = threading.Lock()
 visti: dict[str, float] = {}  # dispositivo -> ultima volta che ha chiesto lo stato (solo in memoria)
+attese: dict[str, float] = {}  # dispositivo -> da quando aspetta una catena con parole nuove (solo in memoria)
+in_gioco: dict[str, float] = {}  # dispositivo -> ultima volta che ha chiesto un turno o scritto (solo in memoria)
 
 
 def stato_vuoto() -> dict:
-    return {"fase": "attesa", "prompt": None, "voti": {}, "catene": [], "nomi": {}}
+    # "viste": {telefono: parole che ha già visto o scritto nelle catene}, per mostrargliene sempre di nuove
+    return {"fase": "attesa", "prompt": None, "voti": {}, "catene": [], "nomi": {}, "viste": {}}
 
 
 def carica() -> dict:
@@ -68,12 +85,42 @@ def controlla_id(d: str) -> str:
 
 
 def solo_palco(request: Request) -> None:
-    if request.client is None or request.client.host not in {"127.0.0.1", "::1"}:
+    if (request.client is None or request.client.host not in {"127.0.0.1", "::1"}
+            or not secrets.compare_digest(request.headers.get("x-palco", ""), CODICE_PALCO)):
         raise HTTPException(403, "Solo il palco può farlo 😉")
 
 
 def catene_finite() -> bool:
     return bool(S["catene"]) and all(len(c["parole"]) >= c["lunghezza"] for c in S["catene"])
+
+
+def ricorda_viste(d: str, parole: list[str]) -> None:
+    viste = S["viste"].setdefault(d, [])
+    for p in parole:
+        if p.lower() not in viste:
+            viste.append(p.lower())
+
+
+def gia_viste(catena: dict, viste: set[str]) -> tuple[bool, int]:
+    """(niente di nuovo?, quante parole già viste) fra quelle che la catena ti mostrerebbe."""
+    visibili = [p.lower() for p in catena["parole"][-catena["memoria"]:]]
+    ripetute = sum(p in viste for p in visibili)
+    return ripetute == len(visibili), ripetute
+
+
+def qualcuno_meglio(catena: dict, d: str, ora: float) -> bool:
+    """Vale la pena che d aspetti invece di prendere questa catena (che non gli mostra niente di nuovo)?
+
+    Sì se qualcun altro sta scrivendo (presto un'altra catena avrà un'ultima parola nuova per d)
+    e c'è chi gioca, libero, a cui questa catena mostrerebbe parole nuove. Altrimenti aspettare
+    rallenta e basta: in una sala piccola le ripetizioni non si possono evitare tutte.
+    """
+    occupati = {c["turno"]["d"] for c in S["catene"] if c["turno"]}
+    if not occupati - {d}:
+        return False
+    return any(p != d and p not in occupati and p != catena["autori"][-1] and ora - t < 30
+               and not gia_viste(catena, set(S["viste"].get(p, [])))[0]
+               for p, t in in_gioco.items())
 
 
 app = FastAPI(title="Il pappagallo stoca**ico", docs_url=None, redoc_url=None)
@@ -88,7 +135,7 @@ def pagina():
 
 @app.get("/api/ping")
 def ping():
-    return {"ok": True}
+    return {"ok": True, "server": SERVER_ID}
 
 
 # --- il pubblico -------------------------------------------------------------
@@ -160,6 +207,7 @@ def chiedi_turno(r: Richiesta):
         if S["fase"] != "catena":
             raise HTTPException(409, "Le catene non sono aperte.")
         ora = time.time()
+        in_gioco[d] = ora
         for c in S["catene"]:
             if c["turno"] and c["turno"]["scade"] < ora and c["turno"]["d"] != d:
                 c["turno"] = None
@@ -170,9 +218,18 @@ def chiedi_turno(r: Richiesta):
             if not libere:
                 return {"attendi": True, "finite": catene_finite()}
             random.shuffle(libere)
-            # prima le catene dove non hai ancora scritto, poi le più corte
-            catena = min(libere, key=lambda c: (d in c["autori"], len(c["parole"])))
+            viste = set(S["viste"].get(d, []))
+            # prima le catene che ti mostrano parole nuove (che non hai già visto o scritto),
+            # poi quelle dove non hai ancora scritto, poi le più corte
+            catena = min(libere, key=lambda c: (*gia_viste(c, viste), d in c["autori"], len(c["parole"])))
+            if (gia_viste(catena, viste)[0] and qualcuno_meglio(catena, d, ora)
+                    and ora - attese.setdefault(d, ora) < ATTESA_NOVITA):
+                # solo parole già viste (tipo la parola iniziale, di nuovo): meglio aspettare un attimo
+                # che qualcuno finisca la sua parola, e questa catena la prende chi non l'ha vista
+                return {"attendi": True, "finite": False, "nuove": True}
+            attese.pop(d, None)
             catena["turno"] = {"d": d, "scade": ora + DURATA_TURNO}
+            ricorda_viste(d, catena["parole"][-catena["memoria"]:])
             salva()
         return {
             "catena": catena["id"],
@@ -203,6 +260,8 @@ def aggiungi_parola(a: Aggiunta):
         catena["parole"].append(parola)
         catena["autori"].append(d)
         catena["turno"] = None
+        ricorda_viste(d, [parola])
+        in_gioco[d] = time.time()
         salva()
         return {"ok": True, "parola": parola, "mie_parole": sum(c["autori"].count(d) for c in S["catene"])}
 
@@ -243,6 +302,9 @@ def nuove_catene(nc: NuoveCatene, request: Request):
              "parole": list(inizio), "autori": ["palco"] * len(inizio), "turno": None}
             for i in range(max(1, min(nc.n, 40)))
         ]
+        S["viste"] = {}  # catene nuove: per ora nessuno ha visto niente
+        attese.clear()
+        in_gioco.clear()
         S["fase"] = "catena"
         salva()
     return {"ok": True, "catene": len(S["catene"])}
@@ -281,12 +343,56 @@ def azzera(request: Request):
     return {"ok": True}
 
 
+def avvia_funnel() -> subprocess.Popen | None:
+    """`tailscale funnel PORTA` in primo piano: resta acceso finché gira il server, poi sparisce."""
+    cli = tailscale_cli()
+    if cli is None:
+        print("⚠️   Tailscale non trovato: installa l'app (tailscale.com) e accedi, oppure usa il router.")
+        return None
+    # Una piccola sentinella in shell: se questo processo muore in qualsiasi modo (anche ucciso),
+    # spegne Funnel entro un secondo, così il sito non resta su Internet per sbaglio.
+    sentinella = (f'"{cli}" funnel {PORTA} & f=$!; '
+                  f'while kill -0 {os.getpid()} 2>/dev/null && kill -0 $f 2>/dev/null; do sleep 1; done; '
+                  'kill $f 2>/dev/null')
+    funnel = subprocess.Popen(["/bin/sh", "-c", sentinella], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              text=True)
+
+    def ripeti():  # quello che dice Tailscale (per esempio il link per abilitare Funnel la prima volta)
+        for riga in funnel.stdout:
+            if riga.strip():
+                print(f"   [funnel] {riga.rstrip()}", flush=True)
+
+    threading.Thread(target=ripeti, daemon=True).start()
+    return funnel
+
+
 if __name__ == "__main__":
     import segno
 
-    url, ok, motivo = url_da_mostrare()
-    print(f"\n🦜  Il sito della sala è su  {url}   (rete: {modo()})")
-    print(("✅  " if ok else "⚠️   il QR delle slide non porta qui: ") + motivo.replace("`", "") + "\n")
-    segno.make(url, error="m").terminal(compact=True)
-    print("\n(il palco, cioè il notebook, parla con http://127.0.0.1:%d)\n" % PORTA)
-    uvicorn.run(app, host="0.0.0.0", port=PORTA, log_level="warning")
+    funnel = avvia_funnel() if modo() == "online" else None
+
+    def annuncia():
+        url, ok, motivo = url_da_mostrare()
+        print(f"\n🦜  Il sito della sala è su  {url}   (rete: {modo()})")
+        print(("✅  " if ok else "⚠️   il QR delle slide non porta qui: ") + motivo.replace("`", "") + "\n")
+        segno.make(url, error="m").terminal(compact=True)
+        print("\n(il palco, cioè il notebook, parla con http://127.0.0.1:%d)\n" % PORTA, flush=True)
+        if funnel and not ok:  # la prima volta Funnel ci mette qualche minuto: lo diciamo appena funziona
+            print("⏳  riprovo ogni 15 secondi finché l'indirizzo pubblico non risponde…", flush=True)
+            for _ in range(80):  # 20 minuti
+                time.sleep(15)
+                if funnel.poll() is not None:
+                    return
+                ok, motivo = url_da_mostrare()[1:]
+                if ok:
+                    print("✅  " + motivo.replace("`", ""), flush=True)
+                    return
+
+    # il controllo chiama il sito, quindi aspetta che il server (e Funnel) siano partiti
+    threading.Thread(target=lambda: (time.sleep(5.0 if funnel else 1.0), annuncia()), daemon=True).start()
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=PORTA, log_level="warning")
+    finally:
+        if funnel and funnel.poll() is None:
+            funnel.terminate()  # Funnel si spegne: il sito non è più su Internet
+            funnel.wait(timeout=5)

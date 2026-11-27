@@ -14,3 +14,6 @@ sala-backup-*.json
 # er pappagallo romano: i testi scaricati e il modello addestrato (1 GB e più)
 romanaccio/testi/
 modelli/
+
+# il codice segreto del palco, nuovo a ogni avvio di server.py
+.palco

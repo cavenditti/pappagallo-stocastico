@@ -24,25 +24,38 @@ Le slide per spiegare il gioco sono un deck su claude.ai (link nella chat). Per 
 
 ---
 
-## La rete: niente Internet, ma una rete comune
+## La rete: online, con il router come piano B
 
-Telefoni e portatile devono stare sulla **stessa rete Wi-Fi**. Internet non serve: modello, sito e notebook girano tutti sul portatile.
+Modello, sito e notebook girano tutti sul portatile. Il piano A è metterlo **su Internet** con Tailscale Funnel: in sala il segnale c'è, e ognuno usa i dati del proprio telefono, senza Wi-Fi e senza limiti di dispositivi.
 
 | Opzione | Quando va bene |
 |---|---|
-| **Un router qualsiasi** (anche uno di casa riciclato, senza Internet) | la scelta sicura per 30–50 persone |
-| Hotspot del Mac (Condivisione Internet) | il piano B: niente hardware in più e indirizzo fisso, ma va provato prima (vedi sotto) |
+| **Online con Tailscale Funnel** | il piano A: indirizzo fisso, HTTPS, nessun limite di telefoni. Serve Internet sul portatile |
+| Un router qualsiasi (anche uno di casa riciclato, senza Internet) | il piano B. Il nostro Zyxel regge 32 dispositivi |
+| Hotspot del Mac (Condivisione Internet) | il piano C: niente hardware in più e indirizzo fisso, ma va provato prima (vedi sotto) |
 | Hotspot del telefono | solo per gruppi piccoli: di solito regge una decina di dispositivi al massimo |
-| Wi-Fi della birreria | spesso isola i dispositivi fra loro, e allora i telefoni non vedono il portatile. Provalo prima |
+
+Si passa da una all'altra con `/aggiorna-qr online`, `/aggiorna-qr 192.168.1.10` o `/aggiorna-qr hotspot` in Claude Code: cambia il codice, i QR e le slide (anche il passo del Wi-Fi, che online sparisce). Poi riscarica il PDF.
+
+### Online con Tailscale Funnel (piano A)
+
+Funnel pubblica su Internet un server del portatile, a un indirizzo fisso: **https://carlos-macbook-pro.tailefac23.ts.net** (nome del Mac + nome della tailnet, in `URL_ONLINE` in `sala.py`).
+
+- **La prima volta**: l'app Tailscale deve essere installata e con l'accesso fatto, e Funnel va abilitato per la tailnet. Al primo avvio `server.py` stampa il link per farlo (`login.tailscale.com/f/funnel?...`).
+- **Poi non c'è niente da fare**: `uv run python server.py` accende Funnel e lo spegne quando chiudi il server. In cima deve comparire ✅ "porta a questo portatile, via Internet".
+- **Il portatile ha bisogno di Internet**: il Wi-Fi del locale, o il telefono via USB. Il traffico è minimo: 45 telefoni che chiedono lo stato ogni 1,5 secondi fanno pochi KB al secondo.
+- **La prova**: un telefono con i **dati mobili** (Wi-Fi spento) inquadra il QR della slide 3. Dal portatile stesso l'indirizzo passa per la tailnet, quindi non prova la strada pubblica.
+- **Sicurezza**: online chiunque abbia l'indirizzo può aprire la pagina e votare, ma non può comandare il gioco. I comandi del palco (aprire le votazioni, avviare le catene, azzerare) vogliono un codice segreto che `server.py` scrive in `.palco` a ogni avvio e che il notebook legge da lì.
+- **Se Internet cade** in sala: `/aggiorna-qr 192.168.1.10` (serve Internet per le slide, quindi meglio prepararsi il PDF del piano B in anticipo), oppure fai inquadrare il QR in cima al notebook.
 
 ### Il router: cosa impostare
 
-Le slide stampano due QR fissi: il primo per entrare nella rete, il secondo per aprire il gioco. Va bene un router di casa qualsiasi, anche senza Internet. Nelle sue impostazioni:
+Col router (piano B) le slide stampano due QR fissi: il primo per entrare nella rete, il secondo per aprire il gioco. Va bene un router di casa qualsiasi, anche senza Internet. Nelle sue impostazioni:
 
-1. **Wi-Fi `pappagallo`, password `pydataroma` (WPA2).** È il QR della slide 3, "inquadra e collegati".
+1. **Wi-Fi `pappagallo`, password `pydataroma` (WPA2).** È il QR della slide del Wi-Fi, "inquadra e collegati", che `/aggiorna-qr` rimette nel deck quando si passa al router.
 2. **Spazio per tutti:** l'intervallo DHCP deve avere almeno 60 indirizzi. Alcuni router di fabbrica ne danno 50, e con 45 telefoni più il portatile si è al limite.
 3. **Niente isolamento dei client:** usa la rete Wi-Fi principale, non quella "ospiti", che di solito impedisce ai telefoni di vedere il portatile.
-4. **Un indirizzo fisso per il portatile.** È quello del QR della slide 4. Ci sono tre strade, dalla più comoda:
+4. **Un indirizzo fisso per il portatile.** È quello del QR del gioco. Ci sono tre strade, dalla più comoda:
    - **un nome**, se il router lo permette. Su OpenWrt: Network › DHCP and DNS › Static Leases, con Hostname `pappagallo`, e diventa `pappagallo.lan`. Su una FRITZ!Box, il nome del dispositivo funziona già come `nome.fritz.box`.
    - **una prenotazione DHCP** sul router: il portatile riceve sempre lo stesso IP. La trovi come "prenotazione indirizzo", "DHCP statico" o simili; su FRITZ!Box è "Assegna sempre lo stesso indirizzo IPv4 a questo dispositivo". Su macOS, per questa rete imposta "Indirizzo Wi-Fi privato" su **Fisso** (o disattivalo), altrimenti il router non riconosce il Mac.
    - **un IP manuale sul Mac**, senza toccare il router: in Impostazioni di Sistema › Wi-Fi › (la rete `pappagallo`) › Dettagli › TCP/IP, scegli "Utilizzo di DHCP con indirizzo manuale" e metti un indirizzo **fuori** dall'intervallo DHCP del router (per esempio `.200` se il router assegna da `.100` a `.199`).
@@ -53,7 +66,7 @@ Le slide stampano due QR fissi: il primo per entrare nella rete, il secondo per 
 uv run python sala.py
 ```
 
-Scrive `qr/wifi`, `qr/gioco` e `qr/gioco-hotspot` (in SVG e PNG). Nel deck, sostituisci il QR del gioco nelle slide 4 e 9 con il nuovo `qr/gioco`. Le stesse impostazioni si possono dare con le variabili `SALA_INDIRIZZO`, `SALA_WIFI` e `SALA_WIFI_PASSWORD`.
+Scrive `qr/wifi`, `qr/gioco` e `qr/gioco-hotspot` (in SVG e PNG). Nel deck, sostituisci il QR del gioco nella slide del gioco e in quella finale con il nuovo `qr/gioco`. Le stesse impostazioni si possono dare con le variabili `SALA_INDIRIZZO`, `SALA_WIFI` e `SALA_WIFI_PASSWORD`.
 
 **Oppure fai tutto in un colpo con Claude Code**, da questa cartella: `/aggiorna-qr 192.168.1.200` (o `/aggiorna-qr qui` per l'IP che il portatile ha adesso). Imposta `INDIRIZZO_ROUTER`, rigenera i QR, carica il nuovo QR nel deck e aggiorna QR e indirizzo scritto nelle slide 4 e 9, lasciando com'è il resto delle slide. Serve Internet, quindi fallo prima della serata, e dopo **riscarica il PDF**.
 
@@ -121,7 +134,7 @@ I limiti:
 
 5. Avvia `server.py` e il notebook come al solito: in cima deve comparire "✅ Rete: **hotspot del Mac**".
 
-**Le slide:** le slide 4 e 9 mostrano un indirizzo solo. Per passare all'hotspot, in Claude Code lancia `/aggiorna-qr hotspot`: mette `192.168.2.1:8000` e il suo QR nelle due slide. Per tornare al router, `/aggiorna-qr <indirizzo del router>`. Con l'hotspot il portatile ha Internet (dall'iPhone), quindi si può fare anche sul posto; poi riscarica il PDF. La slide del Wi-Fi è la stessa nei due casi. In emergenza, il QR in cima al notebook è sempre quello giusto per la rete attuale.
+**Le slide:** la slide del gioco e quella finale mostrano un indirizzo solo. Per passare all'hotspot, in Claude Code lancia `/aggiorna-qr hotspot`: mette `192.168.2.1:8000` e il suo QR nelle due slide. Per tornare al router, `/aggiorna-qr <indirizzo del router>`. Con l'hotspot il portatile ha Internet (dall'iPhone), quindi si può fare anche sul posto; poi riscarica il PDF. La slide del Wi-Fi è la stessa nei due casi. In emergenza, il QR in cima al notebook è sempre quello giusto per la rete attuale.
 
 **La prova a casa (obbligatoria):**
 
@@ -190,14 +203,14 @@ Una prova completa di tutto il notebook (`uv run python pappagallo.py`) dura cir
 ## La sera
 
 1. Accendi il router e collega il portatile.
-2. Avvia `uv run python server.py`: stampa l'indirizzo, un QR code e il controllo sull'indirizzo delle slide (✅ o ⚠️). Se macOS chiede di accettare connessioni in entrata per Python, rispondi **Consenti**.
-3. Avvia `HF_HUB_OFFLINE=1 uv run marimo edit pappagallo.py` e porta lo zoom del browser al 125–150%. In alto, il notebook mostra i due QR (prima il Wi-Fi, poi il gioco), `🟢 dati dal sito` e quanti telefoni sono collegati.
+2. Avvia `uv run python server.py`: online accende anche Funnel; poi stampa l'indirizzo, un QR code e il controllo sull'indirizzo delle slide (✅ o ⚠️). Se macOS chiede di accettare connessioni in entrata per Python, rispondi **Consenti**.
+3. Avvia `HF_HUB_OFFLINE=1 uv run marimo edit pappagallo.py` e porta lo zoom del browser al 125–150%. In alto, il notebook mostra il QR del gioco (col router anche quello del Wi-Fi), `🟢 dati dal sito` e quanti telefoni sono collegati.
 4. Proietta le slide (dal PDF).
 
-### Slide 1–4: benvenuto e collegamento (5')
-La slide 3 è il passo 1 (il Wi-Fi), la slide 4 il passo 2 (il gioco). Al primo accesso il sito chiede un nome o un soprannome: serve per la classifica dei Pappagalli d'oro, e si può cambiare in fondo alla pagina. Resta sulla 4 finché il contatore dei telefoni collegati nel notebook non smette di salire. Molti telefoni avvisano che la rete non ha Internet: bisogna dire di restare collegati. Se un Android non apre la pagina, spesso basta disattivare per un attimo i dati mobili.
+### Slide 1–3: benvenuto e collegamento (5')
+Online basta la slide 3: si inquadra il QR con i dati del telefono. Col router `/aggiorna-qr` rimette prima la slide del Wi-Fi, e i passi diventano due. Al primo accesso il sito chiede un nome o un soprannome: serve per la classifica dei Pappagalli d'oro, e si può cambiare in fondo alla pagina. Resta sulla 4 finché il contatore dei telefoni collegati nel notebook non smette di salire. Molti telefoni avvisano che la rete non ha Internet: bisogna dire di restare collegati. Se un Android non apre la pagina, spesso basta disattivare per un attimo i dati mobili.
 
-L'ultima slide (la 9) mostra di nuovo i due QR: lasciala su un secondo schermo, o tornaci fra un atto e l'altro, per chi arriva in ritardo.
+L'ultima slide (la 8) mostra di nuovo il QR del gioco: lasciala su un secondo schermo, o tornaci fra un atto e l'altro, per chi arriva in ritardo.
 
 ### Atto 1: Indovina il prossimo token (15')
 1. Scegli la frase nel menu, poi premi **▶️ Apri la votazione sui telefoni**. Si risponde con **una, due o tre parole**; se qualcuno ne scrive di più, il sito tiene le prime tre.
