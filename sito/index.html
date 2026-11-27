@@ -200,7 +200,7 @@ let ultimo = null;        // ultimo stato ricevuto dal server
 let cambiaVoto = false;   // l'utente vuole cambiare voto
 let turno = null;         // la catena assegnata: {catena, visibili, memoria, posizione, lunghezza, scadenza}
 let esito = null;         // ultima parola aggiunta (per la schermata "fatto")
-let attesaTurno = false;  // stiamo aspettando una catena libera
+let attesaTurno = false;  // stiamo aspettando una catena: "occupate" (tutte prese) o "nuove" (libere, ma già viste)
 
 // --- viste ---------------------------------------------------------------
 function vistaNome() {
@@ -290,10 +290,11 @@ function vistaCatena(s) {
   }
   if (turno) return vistaTurno();
   if (attesaTurno) {
-    return mostra("attendi", `
-      <div class="card centro"><p class="emoji" aria-hidden="true">⏳</p>
-      <p class="prompt">Tutte le catene sono occupate</p></div>
-      <p class="nota centro">Qualcuno sta scrivendo. Riprovo da solo tra un attimo…</p>`);
+    const nuove = attesaTurno === "nuove";  // c'è una catena libera, ma con parole che hai già visto
+    return mostra(`attendi:${attesaTurno}`, `
+      <div class="card centro"><p class="emoji" aria-hidden="true">${nuove ? "🔎" : "⏳"}</p>
+      <p class="prompt">${nuove ? "Ti cerco parole nuove" : "Tutte le catene sono occupate"}</p></div>
+      <p class="nota centro">${nuove ? "Quelle libere le hai già viste." : "Qualcuno sta scrivendo."} Riprovo da solo tra un attimo…</p>`);
   }
   const fatto = esito ? `
       <div class="card"><p class="eyebrow">Fatto ✨</p>
@@ -359,7 +360,7 @@ async function chiediTurno() {
   try {
     const r = await api("/api/catena/turno", {});
     if (r.attendi) {
-      attesaTurno = !r.finite;
+      attesaTurno = r.finite ? false : (r.nuove ? "nuove" : "occupate");
       ridisegna();
       if (attesaTurno) setTimeout(chiediTurno, 2000);
       return;
