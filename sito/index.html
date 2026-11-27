@@ -3,61 +3,135 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13281F">
 <title>Il pappagallo stoca**ico</title>
+<link rel="preload" href="/risorse/font/fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/risorse/font/nunito-sans.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  /* I colori del pappagallo ara: verde giungla, rosso macao, giallo piuma. */
+  /* Gli stessi font delle slide, serviti dal portatile (in sala non c'è Internet). */
+  @font-face { font-family: "Fredoka"; src: url("/risorse/font/fredoka.woff2") format("woff2");
+    font-weight: 400 700; font-display: swap; }
+  @font-face { font-family: "Nunito Sans"; src: url("/risorse/font/nunito-sans.woff2") format("woff2");
+    font-weight: 400 700; font-display: swap; }
+  @font-face { font-family: "JetBrains Mono"; src: url("/risorse/font/jetbrains-mono.woff2") format("woff2");
+    font-weight: 500; font-display: swap; }
+
+  /* I colori delle slide: verde giungla, crema, giallo piuma, rosso ara. */
   :root {
-    color-scheme: light;
-    --bg: #faf5ea; --surface: #fffdf7; --ink: #1b2a22; --ink2: #4b5a50; --muted: #7d867f;
-    --line: #e6dcc6; --accent: #c2391f; --accent-ink: #fffdf7; --chip: #f4c542; --chip-ink: #1b2a22;
-    --danger: #a62a14;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --bg: #0f1f18; --surface: #13281f; --ink: #faf5ea; --ink2: #cfe0d4; --muted: #8fa597;
-      --line: #2b4a3c; --accent: #f4c542; --accent-ink: #1b2a22; --chip: #e5533a; --chip-ink: #fffdf7;
-      --danger: #ff8a73;
-    }
+    color-scheme: dark;
+    --jungle: #13281F; --jungle-2: #1F3A2D; --bordo: #3E5C4E; --nebbia: #2B4A3C;
+    --crema: #FAF5EA; --crema-2: #CFE0D4; --giallo: #F4C542; --inchiostro: #1B2A22;
+    --verde: #3DB26C; --errore: #FF8A73;
+    --titoli: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+    --testo: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --codice: "JetBrains Mono", ui-monospace, "Courier New", monospace;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-text-size-adjust: 100%; }
+  html, body { margin: 0; background: var(--jungle); color: var(--crema); font-family: var(--testo);
+    -webkit-text-size-adjust: 100%; }
   main { max-width: 520px; margin: 0 auto; min-height: 100svh; display: flex; flex-direction: column; gap: 20px;
-    padding: calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)); }
-  header { display: flex; align-items: center; gap: 10px; color: var(--ink2); font-size: 15px; font-weight: 600; }
-  header span:first-child { font-size: 26px; }
+    padding: calc(16px + env(safe-area-inset-top)) 16px 0; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .titolo { margin: 0; font-family: var(--titoli); font-size: 22px; font-weight: 600; line-height: 1.05; }
+  .titolo b { color: var(--giallo); font-weight: 600; }
+  .logo-carta { flex: none; padding: 6px 10px; background: var(--crema); border-radius: 14px; }
+  .logo-carta img { display: block; width: 92px; height: 39px; object-fit: contain; }
+  .logo-carta[hidden] { display: none; }
+
   #vista { display: flex; flex-direction: column; gap: 16px; }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
-  .eyebrow { margin: 0 0 8px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-  .prompt { margin: 0; font-size: clamp(25px, 7vw, 32px); line-height: 1.25; font-weight: 650; overflow-wrap: anywhere; }
-  .prompt .puntini { color: var(--accent); }
-  .visibili { margin: 0; font-size: clamp(32px, 10vw, 44px); line-height: 1.15; font-weight: 700; overflow-wrap: anywhere; }
-  .visibili .nebbia { color: var(--muted); font-weight: 500; }
-  .nota { margin: 0; color: var(--ink2); font-size: 16px; line-height: 1.45; }
-  .chip { display: inline-block; background: var(--chip); color: var(--chip-ink); border-radius: 8px; padding: 0 10px; }
+  .card { background: var(--jungle-2); border: 1px solid var(--nebbia); border-radius: 20px; padding: 20px; }
+  .eyebrow { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--giallo); }
+  .prompt { margin: 0; font-family: var(--titoli); font-size: clamp(26px, 7.5vw, 34px); line-height: 1.2;
+    font-weight: 500; overflow-wrap: anywhere; }
+  .prompt.lungo { font-size: clamp(21px, 6vw, 26px); line-height: 1.25; }
+  .prompt .puntini { color: var(--giallo); }
+  .chip { display: inline-block; padding: 0 .4em; border-radius: 999px; background: var(--giallo);
+    color: var(--inchiostro); font-weight: 600; }
+
+  /* Atto 2: la frase come nelle slide, una fila di anelli. Quelli nascosti sono scuri. */
+  .catena { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 0; }
+  .anello { margin: 0; padding: 6px 16px; border-radius: 999px; font-family: var(--titoli);
+    font-size: clamp(24px, 8vw, 34px); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+  .anello-nascosto { min-width: 64px; background: var(--nebbia); color: var(--crema-2); text-align: center; }
+  .anello-visibile { background: var(--crema); color: var(--jungle); }
+  .anello-domanda { background: var(--giallo); color: var(--inchiostro); }
+
+  .nota { margin: 0; color: var(--crema-2); font-size: 16px; line-height: 1.45; }
   form { display: flex; flex-direction: column; gap: 12px; }
-  input { width: 100%; font: inherit; font-size: 22px; padding: 14px 16px; border-radius: 12px;
-    border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
-  input:focus { outline: none; border-color: var(--accent); }
-  button { font: inherit; font-size: 19px; font-weight: 650; min-height: 54px; padding: 14px 18px; border-radius: 12px;
-    border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
-  button.secondario { background: transparent; color: var(--accent); border: 1.5px solid var(--line); }
+  input { width: 100%; font: inherit; font-size: 22px; padding: 14px 16px; border-radius: 16px;
+    border: 2px solid var(--bordo); background: var(--jungle-2); color: var(--crema); }
+  input::placeholder { color: var(--crema-2); opacity: .6; }
+  input:focus { outline: none; border-color: var(--giallo); }
+  button { font: inherit; font-size: 19px; font-weight: 700; min-height: 56px; padding: 14px 18px; border-radius: 16px;
+    border: 0; background: var(--giallo); color: var(--inchiostro); cursor: pointer; }
+  button:active { transform: translateY(1px); }
+  button.secondario { background: transparent; color: var(--crema); border: 2px solid var(--bordo); }
   button:disabled { opacity: .55; }
-  .errore { margin: 0; min-height: 1.3em; color: var(--danger); font-size: 15px; }
-  .riga { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--muted); font-size: 15px; }
-  .timer { font-variant-numeric: tabular-nums; }
-  .emoji { margin: 4px 0 0; font-size: 60px; text-align: center; }
+  .errore { margin: 0; min-height: 1.3em; color: var(--errore); font-size: 15px; }
+  .riga { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--crema-2);
+    font-size: 15px; }
+  .timer { font-family: var(--codice); font-weight: 500; color: var(--giallo); }
+  .emoji { margin: 4px 0 8px; font-size: 56px; line-height: 1; text-align: center; }
   .centro { text-align: center; }
-  footer { margin-top: auto; text-align: center; color: var(--muted); font-size: 13px; }
-  footer.persa { color: var(--danger); }
+
+  /* In fondo il pappagallo delle slide, appollaiato sul suo ramo. Quando non c'è niente
+     da scrivere, nel fumetto i puntini "parlano". */
+  footer { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+    padding-bottom: env(safe-area-inset-bottom); }
+  #rete { margin: 0 0 22px; color: var(--crema-2); font-size: 13px; }
+  #rete::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px;
+    border-radius: 50%; background: var(--crema-2); vertical-align: 1px; }
+  #rete.collegato::before { background: var(--verde); }
+  #rete.persa { color: var(--errore); }
+  #rete.persa::before { background: var(--errore); }
+  .pappagallo { flex: none; width: min(56vw, 250px); height: auto; margin-right: -12px; margin-bottom: -6px;
+    animation: posa 700ms cubic-bezier(.2, .8, .2, 1) both 150ms; }
+  .pappagallo .punto { opacity: 1; }
+  body.aspetta .pappagallo .punto { animation: parla 1.2s ease-in-out infinite;
+    animation-delay: calc(var(--n) * 160ms); }
+  @keyframes parla { 0%, 60%, 100% { opacity: .3; } 30% { opacity: 1; } }
+  @keyframes posa { from { transform: translateY(-24px) rotate(-6deg); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; } }
 </style>
 </head>
 <body>
 <main>
-  <header><span aria-hidden="true">🦜</span><span>Il pappagallo stoca**ico</span></header>
+  <header>
+    <p class="titolo">Il pappagallo<br>stoca<b>**</b>ico</p>
+    <div class="logo-carta"><img src="/risorse/pydata-roma-capitale.svg" alt="PyData Roma Capitale" width="92" height="39" onerror="this.parentNode.hidden = true"></div>
+  </header>
   <section id="vista" aria-live="polite"></section>
-  <footer id="rete">collegamento alla sala…</footer>
+  <footer>
+    <p id="rete">collegamento alla sala…</p>
+    <svg class="pappagallo" aria-hidden="true" viewBox="0 0 600 800" width="210" height="280" xmlns="http://www.w3.org/2000/svg">
+      <path d="M330 560 L372 792 Q388 800 402 790 L392 556 Z" fill="#E5533A"/>
+      <path d="M372 556 L430 770 Q446 776 456 762 L418 548 Z" fill="#2F6FD0"/>
+      <path d="M300 560 L320 760 Q334 770 346 758 L350 556 Z" fill="#B83A24"/>
+      <path d="M245 262 C215 360 228 470 282 560 C318 616 392 612 414 552 C444 470 432 360 396 278 C370 222 268 222 245 262 Z" fill="#E5533A"/>
+      <path d="M338 292 C432 312 462 432 432 560 C414 628 372 664 338 676 C350 572 326 430 338 292 Z" fill="#2F6FD0"/>
+      <path d="M352 612 C384 600 408 578 426 548" stroke="#1F4E9C" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M350 648 C380 636 402 614 418 590" stroke="#1F4E9C" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M338 292 C416 308 446 392 436 476 C400 446 360 436 336 446 C334 394 334 340 338 292 Z" fill="#2E9E5B"/>
+      <path d="M338 292 C394 300 420 334 424 376 C396 360 364 358 336 366 C335 340 336 316 338 292 Z" fill="#F4C542"/>
+      <circle cx="300" cy="196" r="104" fill="#E5533A"/>
+      <ellipse cx="262" cy="182" rx="50" ry="42" fill="#F7EFDF"/>
+      <circle cx="266" cy="176" r="15" fill="#1B1B1B"/>
+      <circle cx="271" cy="171" r="5" fill="#FBFBF8"/>
+      <path d="M214 236 C188 240 174 256 178 270 C196 294 232 290 246 262 Z" fill="#2A2522"/>
+      <path d="M226 148 C168 146 132 196 140 262 C146 290 160 300 168 288 C162 262 176 240 214 236 C218 206 222 176 226 148 Z" fill="#EFE5D2"/>
+      <rect x="110" y="584" width="440" height="34" rx="17" fill="#7A4A2A"/>
+      <ellipse cx="150" cy="572" rx="38" ry="16" transform="rotate(-25 150 572)" fill="#3DB26C"/>
+      <ellipse cx="520" cy="574" rx="40" ry="16" transform="rotate(20 520 574)" fill="#2E9E5B"/>
+      <ellipse cx="300" cy="590" rx="26" ry="14" fill="#8D8A84"/>
+      <ellipse cx="350" cy="592" rx="26" ry="14" fill="#8D8A84"/>
+      <path d="M30 20 H170 Q190 20 190 40 V96 Q190 116 170 116 H96 L70 142 L74 116 H30 Q10 116 10 96 V40 Q10 20 30 20 Z" fill="#FAF5EA"/>
+      <circle class="punto" style="--n:0" cx="60" cy="68" r="10" fill="#13281F"/>
+      <circle class="punto" style="--n:1" cx="100" cy="68" r="10" fill="#13281F"/>
+      <circle class="punto" style="--n:2" cx="140" cy="68" r="10" fill="#13281F"/>
+    </svg>
+  </footer>
 </main>
 <script>
 "use strict";
@@ -97,6 +171,8 @@ function mostra(nuova, html, poi) {
   if (nuova === chiave) return;
   chiave = nuova;
   vista.innerHTML = html;
+  // niente da scrivere? Allora "parla" il pappagallo (i puntini nel fumetto)
+  document.body.classList.toggle("aspetta", !vista.querySelector("input"));
   if (poi) poi();
 }
 const ridisegna = () => { chiave = null; aggiorna(); };
@@ -159,7 +235,8 @@ function vistaVoto(s) {
 function vistaCatena(s) {
   if (s.finite) {
     turno = null;
-    return vistaAttesa("Le catene sono complete!", `Hai scritto ${s.mie_parole} parole. Ora guarda lo schermo: tra poco le leggiamo.`, "🎭");
+    return vistaAttesa("Le catene sono complete!", (s.mie_parole ? `Hai scritto ${s.mie_parole} ${s.mie_parole === 1 ? "parola" : "parole"}. ` : "")
+      + "Ora guarda lo schermo: tra poco le leggiamo.", "🎭");
   }
   if (turno) return vistaTurno();
   if (attesaTurno) {
@@ -173,7 +250,7 @@ function vistaCatena(s) {
       <p class="prompt">Hai aggiunto <span class="chip">${esc(esito)}</span></p></div>` : `
       <div class="card">
         <p class="eyebrow">Catena di Markov umana</p>
-        <p class="prompt">Vedrai solo l'ultima parola di una frase, a volte le ultime due. Scrivi quella che viene dopo.</p>
+        <p class="prompt lungo">Vedrai solo l'ultima parola di una frase, a volte le ultime due. Scrivi quella che viene dopo.</p>
       </div>`;
   mostra(`pronto:${esito}:${s.mie_parole}`, `${fatto}
     <button id="scrivi">${esito ? "✍️ Un'altra parola" : "✍️ Tocca a me"}</button>
@@ -187,7 +264,11 @@ function vistaTurno() {
   mostra(`turno:${t.catena}:${t.posizione}`, `
     <div class="card">
       <p class="eyebrow">Parola ${t.posizione} di ${t.lunghezza} · vedi ${t.memoria === 1 ? "solo l'ultima parola" : "le ultime due"}</p>
-      <p class="visibili"><span class="nebbia">…</span> ${t.visibili.map(esc).join(" ")}</p>
+      <div class="catena" aria-label="La frase finora: vedi solo ${esc(t.visibili.join(" "))}">
+        <p class="anello anello-nascosto" aria-hidden="true">…</p>
+        ${t.visibili.map((w) => `<p class="anello anello-visibile">${esc(w)}</p>`).join("")}
+        <p class="anello anello-domanda" aria-hidden="true">?</p>
+      </div>
     </div>
     <form id="modulo" autocomplete="off">
       <input id="parola" maxlength="30" placeholder="la parola che viene dopo" autocapitalize="none" enterkeyhint="send" aria-label="La parola successiva">
@@ -251,7 +332,7 @@ async function aggiorna() {
   try {
     const s = await api("/api/stato");
     $("#rete").textContent = "collegato alla sala";
-    $("#rete").className = "";
+    $("#rete").className = "collegato";
     if (s.fase !== (ultimo && ultimo.fase)) { turno = null; esito = null; attesaTurno = false; cambiaVoto = false; }
     ultimo = s;
     if (s.fase === "vota") vistaVoto(s);

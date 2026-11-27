@@ -19,6 +19,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from sala import MAX_PAROLE_RISPOSTA, PORTA, modo, risposta, url_da_mostrare
@@ -75,6 +76,8 @@ def catene_finite() -> bool:
 
 
 app = FastAPI(title="Il pappagallo stoca**ico", docs_url=None, redoc_url=None)
+# Font e logo li serve il portatile: in sala i telefoni non hanno Internet.
+app.mount("/risorse", StaticFiles(directory=QUI / "sito" / "risorse"), name="risorse")
 
 
 @app.get("/")
