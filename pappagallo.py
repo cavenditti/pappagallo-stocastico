@@ -518,9 +518,8 @@ def _(mo):
 @app.cell
 def _(mo):
     rilancia_sala = mo.ui.button(label="🎲 Rilancia", value=0, on_click=lambda v: v + 1)
-    rilancia_smemorato = mo.ui.button(label="🎲 Rilancia", value=0, on_click=lambda v: v + 1)
     rilancia_lambda = mo.ui.button(label="🎲 Rilancia", value=0, on_click=lambda v: v + 1)
-    return rilancia_lambda, rilancia_sala, rilancia_smemorato
+    return rilancia_lambda, rilancia_sala
 
 
 @app.cell
@@ -672,8 +671,18 @@ def _(DEVICE, model, parole, prima_parola, tok, torch, unisci):
 
 
 @app.cell
-def _(PROMPT, mo, model, pappagallo_smemorato, rilancia_smemorato):
-    _ = rilancia_smemorato.value
+def _(mo):
+    smemora = mo.ui.run_button(label="🦜 Togli la memoria al modello", kind="success")
+    smemora
+    return (smemora,)
+
+
+@app.cell
+def _(IN_NOTEBOOK, PROMPT, mo, model, pappagallo_smemorato, smemora):
+    # Ci mette una ventina di secondi e blocca il notebook: parte solo col bottone,
+    # non all'apertura e non quando cambi la frase dell'Atto 1.
+    mo.stop(IN_NOTEBOOK and not smemora.value,
+            mo.md("*Premi **Togli la memoria al modello** (una ventina di secondi). Ogni clic, frasi nuove.*"))
     _con = [f"**memoria {_m or 'piena'}:** {pappagallo_smemorato(model, PROMPT, _m)}" for _m in (1, 2, None)]
     # Per confronto: niente cornice e niente filtri, la parola si pesca da tutta la distribuzione.
     _senza = [f"**memoria {_m}:** {pappagallo_smemorato(model, PROMPT, _m, cornice='', grezzo=True)}"
@@ -681,7 +690,6 @@ def _(PROMPT, mo, model, pappagallo_smemorato, rilancia_smemorato):
     mo.vstack([
         mo.md("#### Con cornice e vincolo di parole intere\n\n" + "\n\n".join(_con)),
         mo.md("#### Senza cornice e senza filtri, per confronto\n\n" + "\n\n".join(_senza)),
-        rilancia_smemorato,
     ])
     return
 

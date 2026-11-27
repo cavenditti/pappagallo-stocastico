@@ -161,7 +161,7 @@ Spunto: anche la tastiera del telefono suggerisce la parola successiva, ed è un
 1. Imposta la parola iniziale (di default `traffico`), il numero di catene e la lunghezza, poi premi **▶️ Avvia le catene sui telefoni**. Le catene pari mostrano 1 parola, le dispari 2.
 2. Sui telefoni compare **✍️ Tocca a me**: chi lo preme riceve una catena libera e ha 60 secondi per scrivere. La tabella di avanzamento non rivela il contenuto.
 3. Quando le catene sono complete, premi **⏹ Chiudi** e poi **🎭 Rivela le frasi**.
-4. Seguono, in ordine: le regole della sala, la sala come generatore (le ✨ sono frasi che nessuno ha scritto), il **🦜 Pappagallo d'oro**: la classifica per perplessità, dove la prima frase (🏆, la più assurda) e l'ultima (🦜, la più prevedibile) vincono entrambe il Pappagallo d'oro e una birra, il grafico "più contesto, meno sorpresa" e il pappagallo smemorato.
+4. Seguono, in ordine: le regole della sala, la sala come generatore (le ✨ sono frasi che nessuno ha scritto), il **🦜 Pappagallo d'oro**: la classifica per perplessità, dove la prima frase (🏆, la più assurda) e l'ultima (🦜, la più prevedibile) vincono entrambe il Pappagallo d'oro e una birra, il grafico "più contesto, meno sorpresa" e il pappagallo smemorato, che parte solo quando premi **🦜 Togli la memoria al modello** (una ventina di secondi, durante i quali il notebook non risponde).
 
 Se premi due volte **Avvia**, le catene vecchie non si perdono: finiscono in `archivio_catene` dentro `sala.json`.
 
@@ -181,6 +181,6 @@ Se premi due volte **Avvia**, le catene vecchie non si perdono: finiscono in `ar
 | Il sito proprio non va | il notebook passa da solo ai dati di esempio (in fondo al notebook) e lo segnala con `🔴` |
 | Il modello è lento | in `il_modello_vota(...)` metti `n=150`, oppure passa a `Qwen/Qwen2.5-0.5B` in `MODEL_ID` |
 | La memoria si esaurisce durante l'addestramento | chiudi le altre app oppure abbassa i passi |
-| Il risultato è noioso | premi 🎲 **Rilancia**: è un campionamento, ogni volta esce qualcosa di diverso |
+| Il risultato è noioso | premi 🎲 **Rilancia** (per il pappagallo smemorato, di nuovo il suo bottone): è un campionamento, ogni volta esce qualcosa di diverso |
 
 > Il modello alternativo `sapienzanlp/Minerva-350M-base-v1.0` (italiano nativo, Sapienza) è più "romano", ma su Hugging Face bisogna accettarne i termini e fare `uv run hf auth login`.
