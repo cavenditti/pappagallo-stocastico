@@ -53,7 +53,9 @@ Le slide stampano due QR fissi: il primo per entrare nella rete, il secondo per 
 uv run python sala.py
 ```
 
-Scrive `qr/wifi`, `qr/gioco` e `qr/gioco-hotspot` (in SVG e PNG). Nel deck, sostituisci il QR del gioco nelle slide 4 e 9 con il nuovo `qr/gioco`, oppure chiedi a Claude di farlo. Le stesse impostazioni si possono dare con le variabili `SALA_INDIRIZZO`, `SALA_WIFI` e `SALA_WIFI_PASSWORD`.
+Scrive `qr/wifi`, `qr/gioco` e `qr/gioco-hotspot` (in SVG e PNG). Nel deck, sostituisci il QR del gioco nelle slide 4 e 9 con il nuovo `qr/gioco`. Le stesse impostazioni si possono dare con le variabili `SALA_INDIRIZZO`, `SALA_WIFI` e `SALA_WIFI_PASSWORD`.
+
+**Oppure fai tutto in un colpo con Claude Code**, da questa cartella: `/aggiorna-qr 192.168.1.200` (o `/aggiorna-qr qui` per l'IP che il portatile ha adesso). Imposta `INDIRIZZO_ROUTER`, rigenera i QR, carica il nuovo QR nel deck e aggiorna QR e indirizzo scritto nelle slide 4 e 9, lasciando com'è il resto delle slide. Serve Internet, quindi fallo prima della serata, e dopo **riscarica il PDF**.
 
 **Controllo:** all'avvio, il notebook e `server.py` verificano che l'indirizzo delle slide arrivi proprio a questo portatile. Se va tutto bene compare ✅. Altrimenti il notebook mostra un avviso e un QR di riserva via IP, che funziona sempre ma non è quello delle slide.
 

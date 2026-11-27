@@ -28,5 +28,6 @@ La guida completa per chi conduce, con la rete, la scaletta e cosa fare se qualc
 | `server.py`, `sito/index.html` | il sito per i telefoni (voti e catene) |
 | `sala.py` | il collegamento fra notebook e sito, i QR (Wi-Fi e gioco) e il controllo dell’indirizzo |
 | `qr/` | i QR delle slide (Wi-Fi, gioco col router, gioco con l’hotspot del Mac); si rigenerano con `uv run python sala.py` |
+| `.claude/skills/aggiorna-qr/` | `/aggiorna-qr <indirizzo>` in Claude Code: nuovo indirizzo del gioco, QR rigenerati e messi nelle slide 4 e 9 del deck |
 | `aiuti.py` | grafici e utilità di testo |
 | `simula_sala.py` | una sala finta per le prove |
