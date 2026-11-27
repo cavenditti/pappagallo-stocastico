@@ -1,7 +1,7 @@
 ---
 name: aggiorna-qr
-description: Cambia l'indirizzo del gioco col router (INDIRIZZO_ROUTER in sala.py), rigenera i QR e mette il nuovo QR del gioco nelle slide 4 e 9 del deck su claude.ai. Usala quando l'utente dà il nuovo IP o nome del portatile sulla rete del router, o chiede di cambiare il QR del gioco nelle slide.
-argument-hint: <ip-o-nome del portatile, es. 192.168.1.200>
+description: Cambia l'indirizzo del gioco (router, o hotspot del Mac), rigenera i QR e mette il nuovo QR del gioco nelle slide 4 e 9 del deck su claude.ai. Usala quando l'utente dà il nuovo IP o nome del portatile sulla rete del router, vuole passare all'hotspot (o tornare al router), o chiede di cambiare il QR del gioco nelle slide.
+argument-hint: <ip-o-nome del portatile, es. 192.168.1.200> | qui | hotspot
 ---
 
 # Aggiorna il QR del gioco nel deck
@@ -9,8 +9,9 @@ argument-hint: <ip-o-nome del portatile, es. 192.168.1.200>
 Nuovo indirizzo richiesto: `$ARGUMENTS`
 
 Il deck è https://claude.ai/artifact/A6Ju2Uh3r48N3wtFo2AxxM (tipo Slides). Le slide da cambiare
-sono `project/slides/gioco.html` (slide 4) e `project/slides/qr-finale.html` (slide 9). Le varianti
-nascoste per l'hotspot (`gioco-hotspot`, `qr-finale-hotspot`) e il QR del Wi-Fi non si toccano.
+sono `project/slides/gioco.html` (slide 4) e `project/slides/qr-finale.html` (slide 9): sono le
+uniche con il QR del gioco e mostrano un indirizzo solo, quello della rete che si usa. Il QR del
+Wi-Fi non si tocca.
 
 ## 1. L'indirizzo
 
@@ -19,6 +20,9 @@ nascoste per l'hotspot (`gioco-hotspot`, `qr-finale-hotspot`) e il QR del Wi-Fi 
 - Se l'argomento è `qui`, usa l'IP attuale del portatile:
   `uv run python -c "from sala import indirizzo_locale; print(indirizzo_locale())"`.
   Ricorda all'utente che deve essere un indirizzo fisso (vedi GUIDA.md, "Il router: cosa impostare").
+- Se l'argomento è `hotspot`, le slide vanno sull'hotspot del Mac: **non toccare `sala.py`** (il
+  modo hotspot si riconosce da solo), salta il punto 2.1, prendi come testo la riga
+  `Gioco (hotspot): http://…` del punto 2.2 e usa `qr/gioco-hotspot.svg` al punto 3.1.
 - Se non c'è nessun argomento, chiedi l'indirizzo e fermati.
 
 ## 2. Il codice e i QR
@@ -27,12 +31,13 @@ nascoste per l'hotspot (`gioco-hotspot`, `qr-finale-hotspot`) e il QR del Wi-Fi 
    nuovo host come valore di default.
 2. Lancia `uv run python sala.py`. Rigenera `qr/` e stampa `Gioco (router): http://…`: quell'URL
    senza `http://` (es. `192.168.1.200:8000`) è il testo da scrivere sulle slide. Riporta la riga
-   del controllo. Un ⚠️ è normale se il portatile non è collegato a quel router in questo momento.
+   del controllo. Un ⚠️ è normale se il portatile non è collegato a quella rete in questo momento.
 
 ## 3. Le slide
 
 1. Carica il nuovo QR come asset: Artifact `publish` con `url` del deck,
-   `file_path` = `<repo>/qr/gioco.svg`, `asset: true`. Tieni l'id di 32 caratteri che restituisce.
+   `file_path` = `<repo>/qr/gioco.svg` (o `qr/gioco-hotspot.svg` per l'hotspot), `asset: true`.
+   Tieni l'id di 32 caratteri che restituisce.
 2. Rileggi le due slide dal deck, perché l'utente le modifica nell'editor: Artifact `read` con
    `paths: ["project/slides/gioco.html", "project/slides/qr-finale.html"]`. Il risultato dice in
    quale cartella le ha salvate (chiamala CARTELLA: contiene `project/`).

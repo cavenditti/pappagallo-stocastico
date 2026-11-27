@@ -84,7 +84,7 @@ I limiti:
 
 5. Avvia `server.py` e il notebook come al solito: in cima deve comparire "✅ Rete: **hotspot del Mac**".
 
-**Le slide:** il deck contiene già le due varianti per l'hotspot, nascoste: `gioco-hotspot` subito dopo la slide del gioco, e `qr-finale-hotspot` in fondo. Nel deck, nascondi `gioco` e `qr-finale` e mostra le due varianti. La slide del Wi-Fi è la stessa nei due casi.
+**Le slide:** le slide 4 e 9 mostrano un indirizzo solo. Per passare all'hotspot, in Claude Code lancia `/aggiorna-qr hotspot`: mette `192.168.2.1:8000` e il suo QR nelle due slide. Per tornare al router, `/aggiorna-qr <indirizzo del router>`. Con l'hotspot il portatile ha Internet (dall'iPhone), quindi si può fare anche sul posto; poi riscarica il PDF. La slide del Wi-Fi è la stessa nei due casi. In emergenza, il QR in cima al notebook è sempre quello giusto per la rete attuale.
 
 **La prova a casa (obbligatoria):**
 
