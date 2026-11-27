@@ -1,0 +1,164 @@
+# Romanaccio de oggi, pe' er pappagallo romano: una frase per riga.
+# Le righe che cominciano con # non contano. Aggiungete pure le vostre!
+# Durante l'addestramento queste frasi pesano più dei sonetti del Belli (vedi romano.py).
+# Insulti sì, ma quelli da bar: niente insulti a gruppi di persone.
+
+# --- Lo sai chi te saluta tanto? ---
+Lo sai chi te saluta tanto? Li mortacci tua!
+Lo sai chi te saluta tanto? Er Pupone, da Trigoria.
+Lo sai chi te saluta tanto? Tu' cuggino, quello che te deve ancora venti euro.
+Lo sai chi te saluta tanto? Er pischello der bar sotto casa, che t'aspetta pe' er caffè.
+Lo sai chi te saluta tanto? Er Cupolone, da San Pietro.
+Lo sai chi te saluta tanto? Mi' nonna, che dice che sei 'n fregnone.
+Lo sai chi te saluta tanto? Er capo, che vole er report pe' ieri.
+Lo sai chi te saluta tanto? Er Colosseo, che sta ancora in piedi mejo de te.
+Aò, lo sai chi te saluta? Er tranviere der 8, che t'ha visto core.
+Te saluta tanto mi' madre, e dice che la domenica se magna da noi.
+
+# --- Saluti e intercalari ---
+Aò, come stai? Tutto a posto?
+Daje, che ce la famo!
+Daje Roma daje!
+Anvedi questo, ma che stai a fà?
+Anvedi come balla Nando!
+Aò, ma che sei scemo?
+Ammazza oh, che caldo che fa oggi.
+Ammazza quanto sei lento, sembri er Raccordo all'ora de punta.
+Mortacci, m'hanno fregato er motorino.
+Mortacci tua, m'hai fatto prende 'n córpo!
+Li mortacci sua, ha parcheggiato in doppia fila n'antra vorta.
+Me cojoni, che macchina!
+Sti cazzi, nun me ne frega gnente.
+E sti cazzi? Che m'hai preso pe' Rockefeller?
+Mo' basta, me so' stufato.
+Mo' arivo, damme cinque minuti.
+Vabbè, lassamo perde.
+Lassa stà, che è mejo.
+Nun te preoccupà, ce penso io.
+Nun me rompe, che nun è giornata.
+Nun te allargà, che poi te ce perdi.
+Statte zitto, che è mejo pe' tutti.
+Ma che stai a dì?
+Ma de che stamo a parlà?
+Ma che ne so io, chiedi a quello là.
+Fa' come te pare, tanto nun m'ascolti.
+Ce vedemo dopo ar bar, offri te.
+A' regà, annamo a magnà?
+A' coso, ma te sei svejato mo'?
+A' bello, ma 'ndo vai?
+Aridaje, sempre la stessa storia!
+Ce stai o ce fai?
+Ma va' a quel paese!
+Ma va' a cagà, va'!
+Ma va' a fà 'n giro, che è mejo.
+Che te possino!
+Mannaggia a te e a quanno t'ho conosciuto.
+Ahó, nun me fà arabbià.
+Me stai a fà venì er nervoso.
+Me so' rotto, me ne vado a casa.
+Nun ce sta trippa pe' gatti.
+Nun c'è gnente da fà, è proprio 'na sòla.
+Volemose bene, che la vita è corta.
+Semo romani, nun ce famo mette li piedi in testa.
+Stamo a posto così, grazie.
+
+# --- Insulti da bar (affettuosi, più o meno) ---
+Sei proprio 'n fregnone.
+A fregnone, ma che hai combinato?
+Sei 'n cojone, e lo sanno tutti.
+Quanto sei rincojonito oggi.
+Sei 'n burino, nun sai manco usà la forchetta.
+Che coatto, co' 'sta catena d'oro.
+Sei 'na sòla, m'hai venduto 'na macchina senza motore.
+'Sto caffè è 'na ciofeca.
+Sei 'n cacacazzi, nun la smetti mai.
+Sei 'no sciroccato, ma che te sei fumato?
+A zozzone, lavate le mani!
+Sei 'n rosicone, perché ha vinto la Roma.
+Stai a rosicà, eh?
+Ma quanto sei pesante, me sembri 'n mattone.
+Sei 'n pischello, nun capisci gnente.
+Fai er ganzo, ma nun sai manco nuotà.
+Sei 'na piaga, me stai sempre appresso.
+Sei 'n pallone gonfiato.
+Sei 'n chiacchierone, parli e basta.
+Fregnacce! Nun ce credo manco se lo vedo.
+Ma che stai a dì? Sò tutte fregnacce.
+Abbozzala, che è mejo.
+Nun fà er fenomeno.
+Ma chi te credi d'esse, er Papa?
+
+# --- Magnà ---
+La carbonara vera se fa cor guanciale, mica co' la pancetta.
+La carbonara co' la panna? Ma che sei matto?
+L'amatriciana è sacra, nun se tocca.
+Cacio e pepe: tre ingredienti e 'n sacco de pazienza.
+Damme 'n supplì, che c'ho 'na fame da lupi.
+Er maritozzo co' la panna è mejo de 'na fidanzata.
+'Na fetta de porchetta e 'n bicchiere de vino, e semo apposto.
+A pranzo se magna, a cena se magna de più.
+'Sta pizza è bassa e croccante, come se deve.
+Er carciofo alla giudia, quello sì che è 'na cosa seria.
+La domenica se magna da nonna, nun se discute.
+C'ho 'na fame che me magnerei pure er tavolino.
+Er vino de li Castelli è 'n'antra cosa.
+Ma che è 'sta roba? 'Na ciofeca.
+
+# --- Roma ---
+Er Colosseo sta lì da duemila anni e nun s'è mai lamentato.
+Er Raccordo all'ora de punta è peggio der purgatorio.
+A Roma, quanno piove, er traffico impazzisce.
+A Roma, quanno piove, er traffico va in tilt e tutti se lamentano.
+Er tram 8 nun passa mai quanno serve.
+L'autobus è in ritardo, ma tanto è normale.
+D'estate se va a Ostia, d'inverno se va ar bar.
+Trastevere de sera è tutto 'n'antro monno.
+Testaccio è er core de Roma.
+Er Cupolone se vede da tutte le parti.
+Roma nun è stata fatta in un giorno, e manco 'sto progetto.
+Er Tevere è sporco, ma è er nostro.
+La Roma vince e tutto er quartiere fa casino.
+Er derby è 'na cosa seria, nun se scherza.
+Er sanpietrino è bello, ma co' li tacchi è 'na tragedia.
+
+# --- Er data scientist romano ---
+Aò, er modello nun converge, mortacci sua.
+'Sto codice funzionava ieri sera, ma stamattina nun parte più.
+Er learning rate è troppo arto, abbassalo 'n po'.
+Ma chi ha scritto 'sto codice? 'Na ciofeca.
+Pandas è cambiato n'antra vorta, me cojoni.
+Er notebook s'è impallato, mo' riparto da capo.
+Ce vole 'n'antra GPU, ma li sordi nun ce stanno.
+Er modello fa overfitting peggio de mi' cuggino cor tiramisù.
+Python è bello, ma l'indentazione è 'na fregatura.
+Ho fatto er push de venerdì sera, mo' so' cavoli.
+L'intelligenza artificiale? 'N pappagallo stocastico, e manco tanto intelligente.
+Daje co' la backpropagation, che famo prima.
+'Sto dataset è sporco come er Tevere.
+Er cliente vole er modello pe' ieri, e mo' come famo?
+Aò, ma 'sto transformer chi l'ha inventato, Nerone?
+Er pappagallo romano nun sbaja mai, dice solo quello che sente.
+
+# --- Modi de dì ---
+Chi va cor zoppo, impara a zoppicà.
+Chi nasce tondo nun pò morì quadrato.
+Mejo 'n morso de pane in pace che 'n pranzo co' li guai.
+Quanno se magna se combatte la morte.
+Chi more more, e chi campa campa.
+Er sole magna le stelle.
+Ogni lasciata è persa.
+Nun c'è sabato senza sole.
+Chi se loda s'imbroda.
+Er peggio sordo è chi nun vò sentì.
+L'acqua fa male e er vino fa cantà.
+Fidasse è bene, ma nun fidasse è mejo.
+Tanto va la gatta ar lardo che ce lassa lo zampino.
+Chi c'ha er pane nun c'ha li denti.
+Quanno er gatto nun c'è, li sorci ballano.
+Mejo puzzà de vino che d'acqua santa.
+Nun dì gatto si nun ce l'hai ner sacco.
+Er tempo è galantuomo.
+Er mejo amico è er portafojo.
+Chi dorme nun pija pesci.
+Rugantino è morto e nun ce lo dice nessuno.
+Er cielo è sempre più blu, ma er conto der bar è sempre più caro.

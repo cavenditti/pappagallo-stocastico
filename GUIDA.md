@@ -61,6 +61,43 @@ Scrive `qr/wifi`, `qr/gioco` e `qr/gioco-hotspot` (in SVG e PNG). Nel deck, sost
 
 Se il portatile ha più interfacce di rete e il notebook sceglie quella sbagliata, forzala con `SALA_HOST=192.168.x.y`.
 
+### Il nostro router: Zyxel VMG8823-B50B
+
+È un modem VDSL degli operatori (Infostrada, Tiscali, Fastweb), ma senza linea telefonica fa benissimo da router della sala: Wi-Fi e DHCP non hanno bisogno di Internet. Il LED di Internet resta spento o rosso, ed è normale. Il piano: il portatile ha sempre **`192.168.1.10`**, quindi il QR del gioco è `http://192.168.1.10:8000`. Un IP non dipende dal DNS dei telefoni, quindi è la scelta più robusta.
+
+**Da fare a casa, il giorno prima:**
+
+1. **Reset di fabbrica**, se il router è già stato usato: a router acceso, tieni premuto il tasto **RESET** sul retro per più di 10 secondi, finché le luci non ripartono.
+2. **Collega il Mac con un cavo** a una porta LAN gialla (serve un adattatore USB-C/Ethernet). In sala resterà così: il cavo non toglie banda ai 45 telefoni e l'indirizzo MAC dell'adattatore non cambia mai. Senza adattatore va bene anche il Wi-Fi, ma per la rete `pappagallo` imposta "Indirizzo Wi-Fi privato" su **Fisso**.
+3. Apri **http://192.168.1.1** e accedi con utente **`admin`** e la password stampata sull'etichetta sotto il router. Con il firmware dell'operatore qualche menu può essere nascosto, ma quelli qui sotto di solito ci sono.
+
+| Menu | Cosa impostare |
+|---|---|
+| Network Setting › Wireless › General | SSID **`pappagallo`**, sicurezza **WPA2-PSK**, password **`pydataroma`**; stesso nome e password sulle due bande (2,4 e 5 GHz) |
+| Network Setting › Wireless (Others / Advanced) | se c'è un limite di client per rete, almeno **64**; a 5 GHz un canale fisso fra **36 e 48** (gli altri sono canali DFS: se il router sente un radar, la rete sparisce per un minuto) |
+| Network Setting › Wireless › WPS | WPS **spento** |
+| Network Setting › Wireless › Guest/More AP | nessuna rete ospiti: si usa solo `pappagallo` |
+| Network Setting › Home Networking › LAN Setup | IP **`192.168.1.1`**, maschera **`255.255.255.0`** (sono quelli di fabbrica); server DHCP attivo, con almeno 60 indirizzi |
+| Network Setting › Home Networking › Static DHCP | aggiungi l'indirizzo MAC del portatile → **`192.168.1.10`** |
+| Network Setting › DNS › DNS Entry (facoltativo) | `pappagallo.lan` → `192.168.1.10`, per chi scrive l'indirizzo a mano e preferisce un nome |
+
+L'indirizzo MAC giusto è quello dell'interfaccia con cui il Mac sta sul router: "Ethernet Address" della voce dell'adattatore (o del Wi-Fi) in
+
+```bash
+networksetup -listallhardwareports
+```
+
+4. Scollega e ricollega il cavo, poi controlla che il Mac abbia preso `192.168.1.10` (`en7` è un esempio: usa la "Device" della lista di prima):
+
+   ```bash
+   ipconfig getifaddr en7
+   ```
+
+5. Le slide devono puntare a quell'indirizzo: in Claude Code, `/aggiorna-qr 192.168.1.10` (serve Internet, quindi fallo dalla rete di casa), poi riscarica il PDF.
+6. **La prova:** con il Mac sul router, avvia `uv run python server.py`. Deve dire ✅. Poi collega 3 o 4 telefoni inquadrando i QR delle slide.
+
+**Attenzione al Mac con due reti.** Se il Mac è sul router con il cavo e intanto anche sul Wi-Fi di casa, macOS può usare il router (che non ha Internet) per tutto, e Claude o il browser smettono di funzionare. Per configurare il router basta il cavo; per usare Internet, scollegalo. In sala spegni il Wi-Fi del Mac, oppure collegalo a `pappagallo`.
+
 ### Piano B: l'hotspot del Mac
 
 Il Mac può creare da sé la rete `pappagallo` con Condivisione Internet. Il vantaggio: il Mac è il router, quindi il suo indirizzo è fisso (di solito `192.168.2.1`) e non c'è niente da configurare per il nome. Il codice se ne accorge da solo: quando la condivisione è attiva passa in modo **hotspot** e usa `http://192.168.2.1:8000`.
@@ -108,6 +145,22 @@ L'idea sarebbe che, appena entrati nel Wi-Fi, il telefono apra da solo la pagina
 ```bash
 uv sync                                  # torch, transformers, marimo, fastapi
 uv run hf download Qwen/Qwen3-0.6B-Base  # ~1,2 GB: va scaricato a casa
+```
+
+**Er pappagallo romano** (il bis): si addestra a casa, una volta sola, e finisce in `modelli/pappagallo-romano/` (circa 1,2 GB, fuori da git).
+
+```bash
+uv run python romano.py scarica
+```
+
+```bash
+uv run python romano.py addestra
+```
+
+Il primo scarica tre libri dell'Ottocento in romanesco, di pubblico dominio, da Liber Liber (~490 KB): i sonetti del Belli e gli *Usi, costumi e pregiudizi del popolo di Roma* di Zanazzo. Il secondo addestra il modello per qualche minuto, mescolando quei testi con il romanaccio di oggi di `romanaccio/frasi.txt`: aggiungetene pure, una frase per riga, poi riaddestrate. Le strofe sconce del Belli restano fuori. Per vedere com'è venuto:
+
+```bash
+uv run python romano.py prova "Lo sai chi te saluta tanto?"
 ```
 
 **Prova generale** con una sala finta, in tre terminali:
@@ -172,6 +225,9 @@ Se premi due volte **Avvia**, le catene vecchie non si perdono: finiscono in `ar
 - **Manopole:** passi e learning rate stanno accanto al bottone. Per un modello più "ubriaco di sala", alza l'uno o l'altro.
 
 ---
+
+### Bis: er pappagallo romano (5')
+Dopo il "Grazie!", se c'è tempo: premi **🏛️ Sveja er pappagallo romano** e scrivi una frase, anche suggerita dalla sala. Il grafico mette a confronto la parola successiva secondo il modello normale e secondo quello romano, e sotto ognuno dei due continua la frase. Stesso modello, altri dati: è l'Atto 3 in grande.
 
 ## Se qualcosa va storto
 

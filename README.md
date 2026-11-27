@@ -31,3 +31,4 @@ La guida completa per chi conduce, con la rete, la scaletta e cosa fare se qualc
 | `.claude/skills/aggiorna-qr/` | `/aggiorna-qr <indirizzo>` in Claude Code: nuovo indirizzo del gioco, QR rigenerati e messi nelle slide 4 e 9 del deck |
 | `aiuti.py` | grafici e utilità di testo |
 | `simula_sala.py` | una sala finta per le prove |
+| `romano.py`, `romanaccio/` | er pappagallo romano: lo stesso modello addestrato sul romanesco (Belli, Zanazzo e `frasi.txt`) |

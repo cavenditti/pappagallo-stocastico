@@ -10,3 +10,7 @@ __marimo__/
 sala.json
 sala.tmp
 sala-backup-*.json
+
+# er pappagallo romano: i testi scaricati e il modello addestrato (1 GB e più)
+romanaccio/testi/
+modelli/

@@ -112,15 +112,27 @@ def controlla_url_gioco() -> tuple[bool, str]:
         e_un_ip = True
     except ValueError:
         e_un_ip = False
-    if e_un_ip and host != locale:
+    if e_un_ip and not _e_mio(host):
         return False, f"le slide puntano a `{host}`, ma questo portatile è a {locale}: dagli l'IP fisso {host}"
     try:
         ip = socket.gethostbyname(host)
     except OSError:
         return False, f"`{host}` non si risolve su questa rete (manca il nome sul router?)"
-    if ip != locale:
+    if not _e_mio(ip):
         return False, f"`{host}` porta a {ip}, ma questo portatile è a {locale}"
     return True, f"`{host}` porta a questo portatile"
+
+
+def _e_mio(ip: str) -> bool:
+    """L'IP appartiene a una delle interfacce di questo portatile? (Cavo e Wi-Fi insieme, per esempio.)"""
+    if os.environ.get("SALA_HOST"):
+        return ip == os.environ["SALA_HOST"]
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.bind((ip, 0))  # ci si può legare solo a un indirizzo che è davvero nostro
+        return not ipaddress.ip_address(ip).is_loopback
+    except (OSError, ValueError):
+        return False
 
 
 def url_da_mostrare() -> tuple[str, bool, str]:

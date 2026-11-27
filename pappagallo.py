@@ -1025,6 +1025,72 @@ def _(mo):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ---
+    ## 🏛️ Bis: er pappagallo romano
+
+    Stesso modello, stessa architettura, altri dati. Qualche minuto di addestramento sui sonetti del Belli,
+    sui modi di dire raccolti da Giggi Zanazzo e su un po' di romanaccio de oggi (`romano.py`).
+    Cambiano i dati, e il pappagallo cambia accento.
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    sveja = mo.ui.run_button(label="🏛️ Sveja er pappagallo romano", kind="success")
+    sveja
+    return (sveja,)
+
+
+@app.cell
+def _(AutoModelForCausalLM, DEVICE, IN_NOTEBOOK, mo, sveja, torch):
+    mo.stop(IN_NOTEBOOK and not sveja.value,
+            mo.md("*Premi **Sveja er pappagallo romano**: carica un secondo modello, ci mette qualche secondo.*"))
+    _percorso = mo.notebook_dir() / "modelli" / "pappagallo-romano"
+    mo.stop(not (_percorso / "config.json").exists(),
+            mo.callout(mo.md("Manca er pappagallo romano: lancia `uv run python romano.py scarica` "
+                             "e poi `uv run python romano.py addestra` (qualche minuto)."), kind="warn"))
+    model_romano = AutoModelForCausalLM.from_pretrained(_percorso, dtype=torch.float32).to(DEVICE).eval()
+    return (model_romano,)
+
+
+@app.cell
+def _(mo):
+    frase_romana_ui = mo.ui.text(value="Lo sai chi te saluta tanto?", full_width=True,
+                                 label="Una frase da far continuare (anche suggerita dalla sala)")
+    rilancia_romano = mo.ui.button(label="🎲 Rilancia", value=0, on_click=lambda v: v + 1)
+    mo.hstack([frase_romana_ui, rilancia_romano], align="end", widths=[5, 1])
+    return frase_romana_ui, rilancia_romano
+
+
+@app.cell
+def _(
+    confronta,
+    continua,
+    distribuzione,
+    frase_romana_ui,
+    il_modello_vota,
+    mo,
+    model,
+    model_romano,
+    rilancia_romano,
+):
+    _ = rilancia_romano.value
+    _f = frase_romana_ui.value.strip()
+    mo.stop(not _f, mo.md("*Scrivi una frase.*"))
+    mo.vstack([
+        confronta({"Modello": distribuzione(il_modello_vota(model, _f, n=200)),
+                   "Romano": distribuzione(il_modello_vota(model_romano, _f, n=200))},
+                  f"La parola dopo «{_f}»", top=10),
+        mo.md(f"**Il modello:** {_f} *{continua(model, _f, temperatura=0.8)}*\n\n"
+              f"**Er pappagallo romano:** {_f} *{continua(model_romano, _f, temperatura=0.8)}*"),
+    ])
+    return
+
+
 @app.cell
 def _(random):
     # 📦 Dati di esempio: li usa il notebook quando il sito è spento (prova generale senza telefoni).
