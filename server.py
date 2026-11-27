@@ -30,13 +30,14 @@ PAGINA = QUI / "sito" / "index.html"
 DURATA_TURNO = 60  # secondi per scrivere la propria parola in una catena
 PAROLA = re.compile(r"\w+['’]?|[^\w\s]", re.UNICODE)
 ID_VALIDO = re.compile(r"[0-9a-f]{8,64}")
+MAX_NOME = 24  # caratteri: un nome o un soprannome, per la classifica dei Pappagalli d'oro
 
 blocco = threading.Lock()
 visti: dict[str, float] = {}  # dispositivo -> ultima volta che ha chiesto lo stato (solo in memoria)
 
 
 def stato_vuoto() -> dict:
-    return {"fase": "attesa", "prompt": None, "voti": {}, "catene": []}
+    return {"fase": "attesa", "prompt": None, "voti": {}, "catene": [], "nomi": {}}
 
 
 def carica() -> dict:
@@ -96,12 +97,32 @@ def stato(d: str):
     d = controlla_id(d)
     with blocco:
         visti[d] = time.time()
+        nome = S["nomi"].get(d)
         if S["fase"] == "vota":
-            return {"fase": "vota", "prompt": S["prompt"], "mio_voto": S["voti"].get(S["prompt"], {}).get(d)}
+            return {"fase": "vota", "nome": nome, "prompt": S["prompt"],
+                    "mio_voto": S["voti"].get(S["prompt"], {}).get(d)}
         if S["fase"] == "catena":
             mie = sum(c["autori"].count(d) for c in S["catene"])
-            return {"fase": "catena", "finite": catene_finite(), "mie_parole": mie}
-        return {"fase": "attesa"}
+            return {"fase": "catena", "nome": nome, "finite": catene_finite(), "mie_parole": mie}
+        return {"fase": "attesa", "nome": nome}
+
+
+class Nome(BaseModel):
+    d: str
+    nome: str
+
+
+@app.post("/api/nome")
+def scegli_nome(n: Nome):
+    """Il nome che compare nella classifica dei Pappagalli d'oro (si può cambiare quando si vuole)."""
+    d = controlla_id(n.d)
+    nome = " ".join("".join(ch for ch in n.nome[:200] if ch.isprintable()).split())[:MAX_NOME].strip()
+    if not nome:
+        raise HTTPException(400, "Scrivi un nome o un soprannome.")
+    with blocco:
+        S["nomi"][d] = nome
+        salva()
+    return {"ok": True, "nome": nome}
 
 
 class Voto(BaseModel):
@@ -238,8 +259,11 @@ def dati(request: Request):
             "fase": S["fase"],
             "prompt": S["prompt"],
             "voti": {p: list(v.values()) for p, v in S["voti"].items()},
+            "voti_persone": {p: dict(v) for p, v in S["voti"].items()},  # {frase: {telefono: risposta}}
             "catene": [{"id": c["id"], "memoria": c["memoria"], "lunghezza": c["lunghezza"],
-                        "parole": c["parole"], "occupata": bool(c["turno"])} for c in S["catene"]],
+                        "parole": c["parole"], "autori": c["autori"], "occupata": bool(c["turno"])}
+                       for c in S["catene"]],
+            "nomi": dict(S["nomi"]),
             "persone": len(persone),
             "connessi": sum(1 for t in visti.values() if ora - t < 10),
         }

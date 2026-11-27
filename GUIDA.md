@@ -142,7 +142,7 @@ Una prova completa di tutto il notebook (`uv run python pappagallo.py`) dura cir
 4. Proietta le slide (dal PDF).
 
 ### Slide 1–4: benvenuto e collegamento (5')
-La slide 3 è il passo 1 (il Wi-Fi), la slide 4 il passo 2 (il gioco). Resta sulla 4 finché il contatore dei telefoni collegati nel notebook non smette di salire. Molti telefoni avvisano che la rete non ha Internet: bisogna dire di restare collegati. Se un Android non apre la pagina, spesso basta disattivare per un attimo i dati mobili.
+La slide 3 è il passo 1 (il Wi-Fi), la slide 4 il passo 2 (il gioco). Al primo accesso il sito chiede un nome o un soprannome: serve per la classifica dei Pappagalli d'oro, e si può cambiare in fondo alla pagina. Resta sulla 4 finché il contatore dei telefoni collegati nel notebook non smette di salire. Molti telefoni avvisano che la rete non ha Internet: bisogna dire di restare collegati. Se un Android non apre la pagina, spesso basta disattivare per un attimo i dati mobili.
 
 L'ultima slide (la 9) mostra di nuovo i due QR: lasciala su un secondo schermo, o tornaci fra un atto e l'altro, per chi arriva in ritardo.
 
@@ -161,7 +161,8 @@ Spunto: anche la tastiera del telefono suggerisce la parola successiva, ed è un
 1. Imposta la parola iniziale (di default `traffico`), il numero di catene e la lunghezza, poi premi **▶️ Avvia le catene sui telefoni**. Le catene pari mostrano 1 parola, le dispari 2.
 2. Sui telefoni compare **✍️ Tocca a me**: chi lo preme riceve una catena libera e ha 60 secondi per scrivere. La tabella di avanzamento non rivela il contenuto.
 3. Quando le catene sono complete, premi **⏹ Chiudi** e poi **🎭 Rivela le frasi**.
-4. Seguono, in ordine: le regole della sala, la sala come generatore (le ✨ sono frasi che nessuno ha scritto), il **🦜 Pappagallo d'oro**: la classifica per perplessità, dove la prima frase (🏆, la più assurda) e l'ultima (🦜, la più prevedibile) vincono entrambe il Pappagallo d'oro e una birra, il grafico "più contesto, meno sorpresa" e il pappagallo smemorato, che parte solo quando premi **🦜 Togli la memoria al modello** (una ventina di secondi, durante i quali il notebook non risponde).
+4. Seguono, in ordine: le regole della sala, la sala come generatore (le ✨ sono frasi che nessuno ha scritto), il grafico "più contesto, meno sorpresa", il **🦜 Pappagallo d'oro** e il pappagallo smemorato, che parte solo quando premi **🦜 Togli la memoria al modello** (una ventina di secondi, durante i quali il notebook non risponde).
+5. **🏆 Proclama i Pappagalli d'oro**: il modello misura la sorpresa di ogni parola scritta da ognuno, cioè le risposte dell'Atto 1 e le parole delle catene, ciascuna con il contesto che vedeva chi l'ha scritta. Poi fa la media per persona: vincono la perplessità più alta (🏆, il pappagallo più imprevedibile) e la più bassa (🦜, il più prevedibile), con un Pappagallo d'oro e una birra a testa. In gara chi ha scritto almeno 3 parole. Il calcolo prende qualche secondo; i nomi sono quelli scelti sul telefono.
 
 Se premi due volte **Avvia**, le catene vecchie non si perdono: finiscono in `archivio_catene` dentro `sala.json`.
 

@@ -16,9 +16,9 @@ import time
 import urllib.error
 import urllib.request
 
-from sala import Sala
+from sala import PORTA, Sala
 
-BASE = "http://127.0.0.1:8000"
+BASE = f"http://127.0.0.1:{PORTA}"  # SALA_PORTA per provarlo su un altro server
 _apri = urllib.request.build_opener(urllib.request.ProxyHandler({})).open
 
 # Cosa "pensa" la sala finta per ogni prompt (pesi = quanto è popolare la risposta, da una a tre parole).
@@ -49,6 +49,8 @@ for _f in FRASI:
     for _a, _b in zip(_p, _p[1:]):
         SUCCESSIVI.setdefault(_a, []).append(_b)
 TUTTE = sorted({w for f in FRASI for w in f.lower().split()})
+NOMI = ["Giulia", "Marco", "Sara", "Luca", "Chiara", "Matteo", "Elena", "Davide", "Francesca", "Andrea",
+        "Valentina", "Simone", "Martina", "Lorenzo", "Alessia"]
 
 
 def api(percorso: str, dati: dict | None = None):
@@ -68,6 +70,7 @@ def telefono(n: int, stop: threading.Event, ritmo: float) -> None:
     d = secrets.token_hex(12)
     votati: set[str] = set()
     rng = random.Random(n)
+    api("/api/nome", {"d": d, "nome": f"{NOMI[n % len(NOMI)]} {'BRSTV'[n // len(NOMI) % 5]}."})
     while not stop.is_set():
         s = api(f"/api/stato?d={d}")
         if s and s.get("fase") == "vota" and s["prompt"] not in votati:

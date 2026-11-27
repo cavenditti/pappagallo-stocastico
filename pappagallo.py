@@ -133,14 +133,15 @@ def _(
 
 
 @app.cell
-def _(DEMO_CATENE, DEMO_VOTI, sito):
+def _(DEMO_CATENE, DEMO_NOMI, DEMO_VOTI, DEMO_VOTI_PERSONE, sito):
     def dati_sala() -> dict:
         """I dati veri dal sito; se il sito è spento, quelli di esempio (in fondo al notebook)."""
         dati = sito.dati()
         if dati is not None:
             return {**dati, "fonte": "🟢 dati dal sito"}
-        return {"fase": None, "prompt": None, "voti": DEMO_VOTI, "catene": DEMO_CATENE, "persone": 0,
-                "connessi": 0, "fonte": "🔴 sito spento (`uv run python server.py`): uso i dati di esempio"}
+        return {"fase": None, "prompt": None, "voti": DEMO_VOTI, "voti_persone": DEMO_VOTI_PERSONE,
+                "catene": DEMO_CATENE, "nomi": DEMO_NOMI, "persone": 0, "connessi": 0,
+                "fonte": "🔴 sito spento (`uv run python server.py`): uso i dati di esempio"}
 
     return (dati_sala,)
 
@@ -547,11 +548,10 @@ def _(REGOLE, TUTTE, inizio_ui, mo, parole, random, rilancia_sala, unisci):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ### 🏆🦜 Pappagallo d'oro
+    ### Più contesto, meno sorpresa
 
     La **perplessità** misura quanto una frase sorprende il modello: $e^{\text{loss media per token}}$.
-
-    La frase più assurda e la più prevedibile vincono il 🦜 **Pappagallo d'oro** (e una birra).
+    Le vostre catene contro frasi normali, scritte da qualcuno che vedeva tutta la frase.
     """)
     return
 
@@ -577,13 +577,128 @@ def _(
     _gruppo = {1: "memoria 1 parola", 2: "memoria 2 parole"}
     _righe = [(_f, _gruppo[_m], perplessita(model, _f)) for _m, _f in FRASI_CATENA]
     _righe += [(_f, "frase normale", perplessita(model, _f)) for _f in FRASI_NORMALI]
+    _tabella = ["| frase | memoria | perplessità |", "|---|---|---:|"]
+    _tabella += [f"| {_f} | {_g} | {numero(_ppl)} |" for _f, _g, _ppl in sorted(_righe, key=lambda r: -r[2])]
+    mo.vstack([grafico_perplessita(_righe, "Più contesto, meno sorpresa"),
+               mo.accordion({"Tutte le frasi": mo.md("\n".join(_tabella))})])
+    return
 
-    _classifica = sorted((r for r in _righe if r[1] != "frase normale"), key=lambda r: -r[2])
-    _tabella = ["| | frase | memoria | perplessità |", "|---|---|---|---:|"]
-    for _i, (_f, _g, _ppl) in enumerate(_classifica):
-        _premio = "🏆" if _i == 0 else "🦜" if _i == len(_classifica) - 1 else f"{_i + 1}."
-        _tabella.append(f"| {_premio} | {_f} | {_g} | {numero(_ppl)} |")
-    mo.vstack([mo.md("\n".join(_tabella)), grafico_perplessita(_righe, "Più contesto, meno sorpresa")])
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### 🏆🦜 Pappagallo d'oro
+
+    Il modello dà un voto a **ogni parola che avete scritto**: le risposte dell'Atto 1 e le parole delle catene.
+    Il voto è la sorpresa, $-\log P(\text{parola} \mid \text{quello che vedevate voi})$: nelle catene, le ultime 1 o 2 parole
+    (con la stessa cornice del pappagallo smemorato).
+
+    Poi sommiamo le sorprese di ognuno e dividiamo per il numero di parole. La vostra **perplessità** è $e^{\text{sorpresa media}}$:
+    è come se, a ogni vostra parola, il modello avesse dovuto tirare a indovinare fra tante parole quante dice quel numero.
+
+    Il pappagallo più imprevedibile (perplessità più alta) e il più prevedibile (più bassa) vincono il 🦜 **Pappagallo d'oro**
+    (e una birra). In gara chi ha scritto almeno 3 parole.
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    proclama = mo.ui.run_button(label="🏆 Proclama i Pappagalli d'oro", kind="success")
+    proclama
+    return (proclama,)
+
+
+@app.cell
+def _(
+    CORNICE,
+    DEVICE,
+    IN_NOTEBOOK,
+    dati_sala,
+    defaultdict,
+    math,
+    mo,
+    model,
+    numero,
+    parole,
+    proclama,
+    tok,
+    torch,
+    unisci,
+):
+    mo.stop(IN_NOTEBOOK and not proclama.value,
+            mo.md("*Quando le catene sono finite e rivelate, premi **Proclama i Pappagalli d'oro**.*"))
+    MIN_PAROLE = 3
+
+    @torch.no_grad()
+    def sorprese(m, coppie: list[tuple[str, str]], lotto: int = 8) -> list[float]:
+        """Per ogni (contesto, testo): −log P(testo | contesto), in nat, sommata sui token del testo."""
+        risultati = []
+        for i in range(0, len(coppie), lotto):
+            righe, inizi = [], []
+            for contesto, testo in coppie[i:i + lotto]:
+                a = tok(contesto).input_ids
+                righe.append(a + tok(" " + testo, add_special_tokens=False).input_ids)
+                inizi.append(len(a))
+            ids = torch.full((len(righe), max(map(len, righe))), tok.pad_token_id)
+            maschera = torch.zeros_like(ids)
+            for j, r in enumerate(righe):
+                ids[j, :len(r)], maschera[j, :len(r)] = torch.tensor(r), 1
+            ids, maschera = ids.to(DEVICE), maschera.to(DEVICE)
+            logit = m(input_ids=ids, attention_mask=maschera).logits[:, :-1].float()
+            # log P(token k+1 | token 0..k), per ogni posizione: la regola della catena, un token alla volta
+            logp = logit.gather(2, ids[:, 1:].unsqueeze(-1)).squeeze(-1) - torch.logsumexp(logit, dim=-1)
+            risultati += [-logp[j, inizi[j] - 1:len(r) - 1].sum().item() for j, r in enumerate(righe)]
+        return risultati
+
+    _d = dati_sala()
+    # Tutto quello che ognuno ha scritto, con quello che vedeva mentre lo scriveva.
+    _voci = [(_tel, _prompt, _testo) for _prompt, _per in _d.get("voti_persone", {}).items()
+             for _tel, _testo in _per.items()]
+    for _c in _d["catene"]:
+        for _i, (_w, _tel) in enumerate(zip(_c["parole"], _c.get("autori", []))):
+            if _tel != "palco":
+                _voci.append((_tel, CORNICE + unisci(_c["parole"][max(0, _i - _c["memoria"]):_i]), _w))
+    mo.stop(not _voci, mo.callout(mo.md("Nessuna parola con un autore: serve il sito acceso (e riavviato)."),
+                                  kind="warn"))
+
+    _persone = defaultdict(lambda: {"sorpresa": 0.0, "parole": 0, "voci": []})
+    for (_tel, _ctx, _testo), _s in zip(_voci, sorprese(model, [(_c, _t) for _, _c, _t in _voci])):
+        _n = max(1, len(parole(_testo)))
+        _persone[_tel]["sorpresa"] += _s
+        _persone[_tel]["parole"] += _n
+        _persone[_tel]["voci"].append((_testo, math.exp(_s / _n)))
+
+    # I nomi: chi non l'ha dato resta anonimo, e due "Marco" diventano "Marco" e "Marco (2)".
+    _nomi, _visti = {}, defaultdict(int)
+    for _tel in _persone:
+        _base = _d.get("nomi", {}).get(_tel) or f"anonimo {_tel[:4]}"
+        _visti[_base] += 1
+        _nomi[_tel] = _base if _visti[_base] == 1 else f"{_base} ({_visti[_base]})"
+
+    _gara = sorted(((_tel, math.exp(_p["sorpresa"] / _p["parole"])) for _tel, _p in _persone.items()
+                    if _p["parole"] >= MIN_PAROLE), key=lambda r: -r[1])
+    mo.stop(len(_gara) < 2, mo.callout(mo.md(f"Servono almeno due persone con {MIN_PAROLE} parole."), kind="warn"))
+
+    def _vincitore(titolo: str, tel: str, ppl: float, estremo, cosa: str):
+        _w, _p = estremo(_persone[tel]["voci"], key=lambda v: v[1])
+        return mo.callout(mo.md(f"#### {titolo}\n\n## {_nomi[tel]}\n\nperplessità **{numero(ppl)}** "
+                                f"su {_persone[tel]['parole']} parole<br>{cosa}: *{_w}* ({numero(_p)})"),
+                          kind="success")
+
+    _tabella = ["| | chi | parole | perplessità | la sua parola più sorprendente |", "|---|---|---:|---:|---|"]
+    for _i, (_tel, _ppl) in enumerate(_gara):
+        _segno = "🏆" if _i == 0 else "🦜" if _i == len(_gara) - 1 else f"{_i + 1}."
+        _w, _p = max(_persone[_tel]["voci"], key=lambda v: v[1])
+        _tabella.append(f"| {_segno} | {_nomi[_tel]} | {_persone[_tel]['parole']} | {numero(_ppl)} | {_w} ({numero(_p)}) |")
+    _fuori = [_nomi[_tel] for _tel, _p in _persone.items() if _p["parole"] < MIN_PAROLE]
+    mo.vstack([
+        mo.hstack([_vincitore("🏆 Il pappagallo più imprevedibile", *_gara[0], max, "la parola più assurda"),
+                   _vincitore("🦜 Il pappagallo più prevedibile", *_gara[-1], min, "la parola più scontata")],
+                  widths="equal", gap=1),
+        mo.accordion({f"Classifica completa ({len(_gara)} in gara)": mo.md("\n".join(_tabella))}),
+        mo.md(f"<small>Fuori gara (meno di {MIN_PAROLE} parole): {', '.join(_fuori)}</small>") if _fuori else mo.md(""),
+    ])
     return
 
 
@@ -876,6 +991,16 @@ def _(mo):
 
 
 @app.cell
+def _(PROMPT_TEST, mo, model, pappagallo_smemorato):
+    _righe = []
+    for _inizio in (PROMPT_TEST, "Ieri sera al pub, il mio capo"):
+        for _ in range(2):
+            _righe.append(f"→ {pappagallo_smemorato(model, _inizio, memoria=None, n_parole=18)}")
+    mo.md("\n\n".join(_righe))
+    return
+
+
+@app.cell
 def _(PROMPT_TEST, mo, model_sala, pappagallo_smemorato):
     _righe = []
     for _inizio in (PROMPT_TEST, "Ieri sera al pub, il mio capo"):
@@ -901,7 +1026,7 @@ def _(mo):
 
 
 @app.cell
-def _():
+def _(random):
     # 📦 Dati di esempio: li usa il notebook quando il sito è spento (prova generale senza telefoni).
     DEMO_VOTI = {
         "A Roma, quando piove, il traffico": {
@@ -926,7 +1051,17 @@ def _():
         (1, "traffico telefonico dei dati personali non si toccano mai le mani in pasta fresca"),
         (2, "traffico aumenta perché tutti escono di casa alle otto per andare in ufficio"),
     ]
-    DEMO_CATENE = [{"id": _i, "memoria": _m, "lunghezza": len(_f.split()), "parole": _f.split()}
+    # 45 persone finte, ognuna con un nome: chi ha votato cosa e chi ha scritto quale parola.
+    _nomi = ["Giulia", "Marco", "Sara", "Luca", "Chiara", "Matteo", "Elena", "Davide", "Francesca", "Andrea",
+             "Valentina", "Simone", "Martina", "Lorenzo", "Alessia"]
+    DEMO_NOMI = {f"demo{_i:02d}": _n for _i, _n in enumerate(f"{_n} {_c}." for _c in "BRS" for _n in _nomi)}
+    _caso = random.Random(7)
+    DEMO_VOTI_PERSONE = {}
+    for _prompt, _conteggi in DEMO_VOTI.items():
+        _risposte = [_r for _r, _k in _conteggi.items() for _ in range(_k)]
+        DEMO_VOTI_PERSONE[_prompt] = dict(zip(_caso.sample(list(DEMO_NOMI), len(_risposte)), _risposte))
+    DEMO_CATENE = [{"id": _i, "memoria": _m, "lunghezza": len(_f.split()), "parole": _f.split(),
+                    "autori": ["palco"] + [_caso.choice(list(DEMO_NOMI)) for _ in _f.split()[1:]]}
                    for _i, (_m, _f) in enumerate(_catene)]
     # Termine di paragone per la perplessità: frasi scritte da qualcuno che vedeva tutta la frase.
     FRASI_NORMALI = [
@@ -934,7 +1069,7 @@ def _():
         "Il codice funzionava ieri sera, ma stamattina i test non passano più.",
         "Dopo la terza birra, ogni data scientist giura che il suo modello non è in overfitting.",
     ]
-    return DEMO_CATENE, DEMO_VOTI, FRASI_NORMALI
+    return DEMO_CATENE, DEMO_NOMI, DEMO_VOTI, DEMO_VOTI_PERSONE, FRASI_NORMALI
 
 
 if __name__ == "__main__":

@@ -29,8 +29,8 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--jungle); color: var(--crema); font-family: var(--testo);
     -webkit-text-size-adjust: 100%; }
-  main { max-width: 520px; margin: 0 auto; min-height: 100svh; display: flex; flex-direction: column; gap: 20px;
-    padding: calc(16px + env(safe-area-inset-top)) 16px 0; }
+  main { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; min-height: 100svh; display: flex;
+    flex-direction: column; gap: 20px; padding: calc(16px + env(safe-area-inset-top)) 16px 0; }
 
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .titolo { margin: 0; font-family: var(--titoli); font-size: 22px; font-weight: 600; line-height: 1.05; }
@@ -76,18 +76,22 @@
   .emoji { margin: 4px 0 8px; font-size: 56px; line-height: 1; text-align: center; }
   .centro { text-align: center; }
 
-  /* In fondo il pappagallo delle slide, appollaiato sul suo ramo. Quando non c'è niente
+  /* Il pappagallo delle slide, appollaiato in fondo allo schermo. Non occupa spazio: la pagina non
+     scorre per lui, e se lo spazio non basta resta dietro a tutto il resto. Quando non c'è niente
      da scrivere, nel fumetto i puntini "parlano". */
-  footer { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
-    padding-bottom: env(safe-area-inset-bottom); }
-  #rete { margin: 0 0 22px; color: var(--crema-2); font-size: 13px; }
+  footer { margin-top: auto; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  #rete { margin: 0; color: var(--crema-2); font-size: 13px; }
+  #rete b { color: var(--crema); }
+  .nota, #rete { text-shadow: 0 0 6px var(--jungle), 0 0 2px var(--jungle); }
+  button.link { min-height: 0; padding: 2px 4px; background: none; color: var(--giallo); font-size: 13px;
+    font-weight: 700; text-decoration: underline; border-radius: 4px; }
   #rete::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px;
     border-radius: 50%; background: var(--crema-2); vertical-align: 1px; }
   #rete.collegato::before { background: var(--verde); }
   #rete.persa { color: var(--errore); }
   #rete.persa::before { background: var(--errore); }
-  .pappagallo { flex: none; width: min(56vw, 250px); height: auto; margin-right: -12px; margin-bottom: -6px;
-    animation: posa 700ms cubic-bezier(.2, .8, .2, 1) both 150ms; }
+  .pappagallo { position: fixed; z-index: 0; right: -12px; bottom: -6px; width: min(56vw, 250px, 30svh);
+    height: auto; pointer-events: none; animation: posa 700ms cubic-bezier(.2, .8, .2, 1) both 150ms; }
   .pappagallo .punto { opacity: 1; }
   body.aspetta .pappagallo .punto { animation: parla 1.2s ease-in-out infinite;
     animation-delay: calc(var(--n) * 160ms); }
@@ -104,7 +108,9 @@
   </header>
   <section id="vista" aria-live="polite"></section>
   <footer>
-    <p id="rete">collegamento alla sala…</p>
+    <p id="rete"><span id="stato-rete">collegamento alla sala…</span><span id="chi"></span></p>
+  </footer>
+</main>
     <svg class="pappagallo" aria-hidden="true" viewBox="0 0 600 800" width="210" height="280" xmlns="http://www.w3.org/2000/svg">
       <path d="M330 560 L372 792 Q388 800 402 790 L392 556 Z" fill="#E5533A"/>
       <path d="M372 556 L430 770 Q446 776 456 762 L418 548 Z" fill="#2F6FD0"/>
@@ -131,15 +137,14 @@
       <circle class="punto" style="--n:1" cx="100" cy="68" r="10" fill="#13281F"/>
       <circle class="punto" style="--n:2" cx="140" cy="68" r="10" fill="#13281F"/>
     </svg>
-  </footer>
-</main>
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
 const vista = $("#vista");
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-// Un identificativo casuale per questo telefono: un voto a testa, e niente nomi.
+// Un identificativo casuale per questo telefono: un voto a testa. Il nome lo sceglie chi gioca
+// (serve solo per la classifica dei Pappagalli d'oro) e resta su questo telefono.
 function nuovoId() {
   const a = new Uint8Array(12);
   crypto.getRandomValues(a);
@@ -164,6 +169,20 @@ async function api(percorso, dati) {
   return corpo;
 }
 
+const CHIAVE_NOME = "pappagallo-nome";
+let nome = (() => { try { return localStorage.getItem(CHIAVE_NOME) || ""; } catch (e) { return ""; } })();
+let cambiaNome = false;   // l'utente ha toccato "cambia"
+let inviandoNome = false;
+function ricordaNome(n) {
+  nome = n;
+  try { localStorage.setItem(CHIAVE_NOME, n); } catch (e) { /* va bene lo stesso: lo sa il server */ }
+  mostraChi();
+}
+function mostraChi() {
+  $("#chi").innerHTML = nome ? ` · <b>${esc(nome)}</b> <button class="link" id="cambia-nome">cambia</button>` : "";
+  if (nome) $("#cambia-nome").onclick = () => { cambiaNome = true; ridisegna(); };
+}
+
 // Ridisegniamo solo quando cambia la "chiave" della vista: così il polling
 // non cancella quello che stai scrivendo.
 let chiave = null;
@@ -184,6 +203,37 @@ let esito = null;         // ultima parola aggiunta (per la schermata "fatto")
 let attesaTurno = false;  // stiamo aspettando una catena libera
 
 // --- viste ---------------------------------------------------------------
+function vistaNome() {
+  mostra("nome", `
+    <div class="card">
+      <p class="eyebrow">${nome ? "Cambia nome" : "Prima di giocare"}</p>
+      <p class="prompt">Come ti chiami?</p>
+    </div>
+    <form id="modulo" autocomplete="off">
+      <input id="nome" maxlength="24" placeholder="un nome o un soprannome" value="${esc(nome)}" autocapitalize="words" enterkeyhint="go" aria-label="Il tuo nome o soprannome">
+      <button id="invia">${nome ? "Fatto" : "Entra"}</button>
+      <p class="errore" id="errore"></p>
+    </form>
+    <p class="nota">Serve per la classifica finale: il modello premia chi lo ha sorpreso di più e chi di meno, parola per parola.</p>`,
+    () => {
+      $("#modulo").onsubmit = async (e) => {
+        e.preventDefault();
+        const scelto = $("#nome").value.trim();
+        if (!scelto) return;
+        $("#invia").disabled = true;
+        try {
+          const r = await api("/api/nome", { nome: scelto });
+          ricordaNome(r.nome);
+          cambiaNome = false;
+          ridisegna();
+        } catch (err) {
+          $("#errore").textContent = err.message;
+          $("#invia").disabled = false;
+        }
+      };
+    });
+}
+
 function vistaAttesa(titolo, testo, emoji = "👀") {
   mostra(`attesa:${titolo}`, `
     <div class="card centro">
@@ -331,20 +381,27 @@ async function aggiorna() {
   inVolo = true;
   try {
     const s = await api("/api/stato");
-    $("#rete").textContent = "collegato alla sala";
+    $("#stato-rete").textContent = "collegato alla sala";
     $("#rete").className = "collegato";
     if (s.fase !== (ultimo && ultimo.fase)) { turno = null; esito = null; attesaTurno = false; cambiaVoto = false; }
     ultimo = s;
-    if (s.fase === "vota") vistaVoto(s);
+    // il server non ci conosce (riavviato o azzerato)? Gli ridiamo il nome che ricordiamo
+    if (nome && s.nome !== nome && !inviandoNome) {
+      inviandoNome = true;
+      api("/api/nome", { nome }).catch(() => {}).finally(() => { inviandoNome = false; });
+    }
+    if (!nome || cambiaNome) vistaNome();
+    else if (s.fase === "vota") vistaVoto(s);
     else if (s.fase === "catena") vistaCatena(s);
     else vistaAttesa("Guarda lo schermo", "Tra poco tocca a te.");
   } catch (err) {
-    $("#rete").textContent = "connessione persa, riprovo…";
+    $("#stato-rete").textContent = "connessione persa, riprovo…";
     $("#rete").className = "persa";
   } finally {
     inVolo = false;
   }
 }
+mostraChi();
 aggiorna();
 setInterval(aggiorna, 1500);
 </script>
