@@ -1082,11 +1082,114 @@ def _(
     _f = frase_romana_ui.value.strip()
     mo.stop(not _f, mo.md("*Scrivi una frase.*"))
     mo.vstack([
-        confronta({"Modello": distribuzione(il_modello_vota(model, _f, n=200)),
+        confronta({"Qwen originale": distribuzione(il_modello_vota(model, _f, n=200)),
                    "Romano": distribuzione(il_modello_vota(model_romano, _f, n=200))},
                   f"La parola dopo «{_f}»", top=10),
-        mo.md(f"**Il modello:** {_f} *{continua(model, _f, temperatura=0.8)}*\n\n"
+        mo.md(f"**Qwen originale:** {_f} *{continua(model, _f, temperatura=0.8)}*\n\n"
               f"**Er pappagallo romano:** {_f} *{continua(model_romano, _f, temperatura=0.8)}*"),
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Er romano ascolta la sala
+
+    Ora prendiamo er pappagallo romano e lo addestriamo anche sulle **vostre risposte**: gli stessi esempi
+    e le stesse manopole dell'Atto 3, ma partendo dal romano invece che dal Qwen originale.
+    Poi lo mettiamo contro il Qwen 0.6B di partenza, che non ha mai visto né Roma né voi.
+    """)
+    return
+
+
+@app.cell
+def _(lr_ui, mo, passi_ui):
+    addestra_romano_btn = mo.ui.run_button(label="🧠 Addestra er romano co' la sala", kind="success")
+    mo.hstack([passi_ui, lr_ui, addestra_romano_btn], justify="start", align="center", gap=2)
+    return (addestra_romano_btn,)
+
+
+@app.cell
+def _(
+    DEVICE,
+    IN_NOTEBOOK,
+    addestra,
+    addestra_romano_btn,
+    copy,
+    esempi,
+    gc,
+    grafico_loss,
+    lr_ui,
+    mo,
+    model_romano,
+    passi_ui,
+    torch,
+):
+    mo.stop(IN_NOTEBOOK and not addestra_romano_btn.value,
+            mo.md("*Premi **Addestra er romano co' la sala**: stessi esempi dell'Atto 3, ma si parte dal romano.*"))
+    gc.collect()
+    if DEVICE == "mps":
+        torch.mps.empty_cache()
+    model_romano_sala = copy.deepcopy(model_romano)  # er romano originale resta com'è
+    perdite_romano = addestra(model_romano_sala, esempi, passi=passi_ui.value, lr=lr_ui.value)
+    grafico_loss(perdite_romano)
+    return model_romano_sala, perdite_romano
+
+
+@app.cell
+def _(
+    PROMPT,
+    VOTI_SALA,
+    accordo,
+    confronta,
+    continua,
+    distribuzione,
+    il_modello_vota,
+    leggi_voti,
+    mo,
+    model,
+    model_romano_sala,
+    perdite_romano,
+):
+    mo.stop(not VOTI_SALA, mo.md("*Nessun voto dall'Atto 1 da confrontare.*"))
+    _p = PROMPT if PROMPT in VOTI_SALA else next(iter(VOTI_SALA))
+    _sala = distribuzione(leggi_voti(VOTI_SALA[_p]))
+    _qwen = distribuzione(il_modello_vota(model, _p))
+    _romano_sala = distribuzione(il_modello_vota(model_romano_sala, _p))
+    mo.vstack([
+        confronta({"Sala": _sala, "Qwen originale": _qwen, "Romano + sala": _romano_sala},
+                  f"Er romano dopo {len(perdite_romano)} passi co' la sala: «{_p}…»", top=8),
+        mo.md(f"## Accordo con la sala: Qwen originale {accordo(_sala, _qwen):.0%} · "
+              f"romano + sala **{accordo(_sala, _romano_sala):.0%}**"),
+        mo.md(f"**Qwen originale:** {_p} *{continua(model, _p, temperatura=0.8)}*\n\n"
+              f"**Romano + sala:** {_p} *{continua(model_romano_sala, _p, temperatura=0.8)}*"),
+    ])
+    return
+
+
+@app.cell
+def _(
+    confronta,
+    continua,
+    distribuzione,
+    frase_romana_ui,
+    il_modello_vota,
+    mo,
+    model,
+    model_romano_sala,
+    rilancia_romano,
+):
+    # La stessa frase libera di prima, ora contro il romano che ha ascoltato la sala.
+    _ = rilancia_romano.value
+    _f = frase_romana_ui.value.strip()
+    mo.stop(not _f, mo.md("*Scrivi una frase.*"))
+    mo.vstack([
+        confronta({"Qwen originale": distribuzione(il_modello_vota(model, _f, n=200)),
+                   "Romano + sala": distribuzione(il_modello_vota(model_romano_sala, _f, n=200))},
+                  f"La parola dopo «{_f}»", top=10),
+        mo.md(f"**Qwen originale:** {_f} *{continua(model, _f, temperatura=0.8)}*\n\n"
+              f"**Romano + sala:** {_f} *{continua(model_romano_sala, _f, temperatura=0.8)}*"),
     ])
     return
 

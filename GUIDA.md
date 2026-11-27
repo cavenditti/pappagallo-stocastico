@@ -227,7 +227,7 @@ Se premi due volte **Avvia**, le catene vecchie non si perdono: finiscono in `ar
 ---
 
 ### Bis: er pappagallo romano (5')
-Dopo il "Grazie!", se c'è tempo: premi **🏛️ Sveja er pappagallo romano** e scrivi una frase, anche suggerita dalla sala. Il grafico mette a confronto la parola successiva secondo il modello normale e secondo quello romano, e sotto ognuno dei due continua la frase. Stesso modello, altri dati: è l'Atto 3 in grande.
+Dopo il "Grazie!", se c'è tempo: premi **🏛️ Sveja er pappagallo romano** e scrivi una frase, anche suggerita dalla sala. Il grafico mette a confronto la parola successiva secondo il modello normale e secondo quello romano, e sotto ognuno dei due continua la frase. Stesso modello, altri dati: è l'Atto 3 in grande. Poi **🧠 Addestra er romano co' la sala**: addestra una copia del romano sugli stessi esempi dell'Atto 3 (voti e catene, con gli stessi passi e learning rate) e lo mette contro il Qwen 0.6B originale, sia sulla frase dell'Atto 1 (con l'accordo con la sala) sia sulla frase libera. Servono le catene già rivelate.
 
 ## Se qualcosa va storto
 

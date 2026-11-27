@@ -20,7 +20,7 @@ SALA = "#2a78d6"     # blu: la sala
 MODELLO = "#eb6834"  # arancio: il modello
 DOPO = "#1baf7a"     # verde acqua: il modello dopo aver ascoltato la sala
 COLORI = {"Sala": SALA, "Modello": MODELLO, "Modello prima": MODELLO, "Modello dopo": DOPO,
-          "Romano": DOPO}
+          "Qwen originale": MODELLO, "Romano": DOPO, "Romano + sala": DOPO}
 
 INK, INK2, MUTED = "#0b0b0b", "#52514e", "#898781"
 GRID, AXIS, SURFACE = "#e1e0d9", "#c3c2b7", "#fcfcfb"
